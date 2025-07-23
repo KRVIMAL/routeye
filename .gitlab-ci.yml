@@ -1,0 +1,11 @@
+# This file is used to build and deploy the application-management service
+variables:
+  CONTAINER_REGISTRY: registry.imztech.io/devops
+  CONTAINER_IMAGE_NAME: "imz-rrda-front"
+  HELM_TARGET_REPO_URL: "git.imztech.io/turing/common-helm-repo"
+  HELM_CHART_PATH: "charts/rrda-full-repo"
+
+include:
+  - project: 'turing/common-pipelines'
+    file: '/universal-image-builder-chart-updater.yaml'
+

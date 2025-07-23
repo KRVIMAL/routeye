@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: uat.routeye.com
+  namespace: default
+  labels:
+    app: uat-routeye-com
+spec:
+  imagePullSecrets:
+    - name: imz-common-repo
+  initContainers:
+    - name: code-builder
+      image: registry.imztech.io/devops/imz-rrda-front:latest
+      env:
+        - name: BUILDER
+          value: "Aamir"
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "Installing dependencies..."
+          yarn install # --frozen-lockfile
+          echo "Running build..."
+          npm run build 
+          echo "Copying artifacts to shared volume..."
+          cp -R dist/* /build-output/
+      volumeMounts:
+      - name: build-artifacts
+          mountPath: /build-output
+  containers:
+    - name: imz-rrda
+      image: registry.imztech.io/turing/common-images/react-nginx-server:latest
+      ports:
+        - containerPort: 80
+      resources:
+        limits:
+          memory: "20Mi"
+          cpu: "100m"
+      volumeMounts:
+        - name: build-artifacts
+          mountPath: /usr/share/nginx/html
+  volumes:
+    - name: build-artifacts
+      emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uat-routeye-com
+  namespace: default
+  labels:
+    app: uat-routeye-com
+spec:
+  selector:
+    app: uat-routeye-com
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: uat-routeye-com
+  namespace: default  # Ingress is also namespaced
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+spec:
+  rules:
+    - host: uat.routeye.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: uat-routeye-com
+                port:
+                  number: 80
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - uat.routeye.com
+      secretName: imztech-io-tls
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: uat-routeye-com
+  namespace: default # Certificate is also namespaced
+spec:
+  secretName: uat-routeye-com-tls
+  dnsNames:
+    - uat.routeye.com
+  issuerRef:
+    name: letsencrypt-issuer
+    kind: ClusterIssuer
