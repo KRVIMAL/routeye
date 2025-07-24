@@ -16,6 +16,7 @@
     "dayjs": "^1.11.13",
     "jsoneditor": "^10.2.0",
     "lodash": "^4.17.21",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.522.0",
     "papaparse": "^5.5.3",
     "react": "^19.1.0",

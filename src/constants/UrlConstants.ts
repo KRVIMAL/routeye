@@ -1,6 +1,17 @@
 export class UrlConstants {
-  baseURL = import.meta.env.VITE_API_BASE_URL;
+  baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-dev.k8s.imztech.io';
+
+  // Auth endpoints
+  loginPath = '/users/login';
+  verifyOtpPath = '/users/verify-otp';
+  resendOtpPath = '/users/resend-otp';
+  forgotPasswordPath = '/users/forgot-password';
+  resetPasswordPath = '/users/reset-password';
+
+  // Page routes
   landingViewPath = "/";
+  loginViewPath = "/login";
+  dashboardViewPath = "/dashboard";
 
   // Device URLs
   devicesViewPath = "/devices";

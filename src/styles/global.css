@@ -24,10 +24,17 @@
   --text-muted: #6B7280;
 }
 
-/* Custom Button Hover Effects */
+/* FIXED: Custom Button Hover Effects */
 .btn-custom-hover:hover {
   background-color: var(--hover-bg) !important;
+}
+
+/* Only apply text and border hover if they exist */
+.btn-custom-hover[style*="--hover-text"]:hover {
   color: var(--hover-text) !important;
+}
+
+.btn-custom-hover[style*="--hover-border"]:hover {
   border-color: var(--hover-border) !important;
 }
 
@@ -249,5 +256,3 @@ textarea:focus-visible {
     color: black !important;
   }
 }
-
-/* Global Css */

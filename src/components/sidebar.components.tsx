@@ -16,14 +16,15 @@ import {
   FiMapPin,
   FiNavigation,
   FiGrid,
+  FiFileText,
 } from "react-icons/fi";
 const sidebarItems = [
   // { name: "Monitoring", href: "/", icon: FiHome },
   // { name: "Style Guide", href: "/styleguide", icon: FiUsers },
   // { name: "Select Demo", href: "/selectdemo", icon: FiFileText },
-  // { name: "Input Demo", href: "/inputdemo", icon: FiFileText },
+  { name: "Input Demo", href: "/inputdemo", icon: FiFileText },
   { name: "Button Demo", href: "/button-demo", icon: FiGrid },
-
+  { name: "Logo", href: "/logo-loader", icon: FiGrid },
   // // Core Modules
   // { name: "Devices", href: "/devices", icon: FiHardDrive },
   // { name: "Vehicles", href: "/vehicles", icon: FiTruck },

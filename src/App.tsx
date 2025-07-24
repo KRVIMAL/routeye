@@ -1,56 +1,54 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import './styles/global.css'
-import { AuthProvider } from "./contexts/AuthContext";
+// src/App.tsx
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { Provider } from "react-redux";
+import { Toaster } from "react-hot-toast";
+// import "./styles/globals.css";
+import "./styles/global.css"
+
+// Redux Store
+import { store } from "./store/store";
+
+// Theme System
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useTheme } from "./hooks/useTheme";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Modules/Dashboard/Dashboard";
-import StyleGuide from "./pages/StyleGuide";
+
+// Auth Context (keep your existing one)
+import { AuthProvider } from "./contexts/AuthContext";
+
+// Hooks
+import { useTokenExpiry } from "./hooks/useTokenExpiry";
+
+// Auth Pages
+import { LoginPage } from "./pages/Modules/Login/Login";
+import { EnterOtpPage } from "./pages/Modules/Login/EnterOtp";
+import { ForgotPasswordPage } from "./pages/Modules/Login/ForgotPassword";
+import { ResetPasswordPage } from "./pages/Modules/Login/ResetPassword";
+import { PasswordChangedPage } from "./pages/Modules/Login/PasswordChanged";
+import { ContactSupportPage } from "./pages/Modules/Login/ContactSupport";
+
+// Protected Route Component
 import ProtectedRoute from "./components/protectedRoute.components";
 import Layout from "./components/layout.components";
+
+// Your existing pages
+import Login from "./pages/Login"; // Keep for backward compatibility if needed
+import Dashboard from "./pages/Modules/Dashboard/Dashboard";
+import StyleGuide from "./pages/StyleGuide";
 import SelectDemo from "./pages/SelectDemo";
 import InputDemo from "./pages/InputDemo";
 import DataTableDemo from "./pages/data-table-demo.pages";
-import Devices from "./pages/Modules/Devices/Devices";
-import AddDeviceForm from "./pages/Modules/Devices/AddDevice/AddEditDeviceForm";
-import Clients from "./pages/Modules/Clients/Clients";
-import AddClientForm from "./pages/Modules/Clients/AddClient/AddEditClientForm";
-import { Toaster } from "react-hot-toast";
-import Vehicles from "./pages/Modules/Vehicles/Vehicles";
-import AddEditVehicleForm from "./pages/Modules/Vehicles/AddVehicle/AddEditVehicleForm";
-import Drivers from "./pages/Masters/Drivers/Drivers";
-import AddEditDriverForm from "./pages/Masters/Drivers/AddDriver/AddEditDriverForm";
-import VehicleMasters from "./pages/Masters/VehicleMaster/VehicleMasters";
-import AddEditVehicleMasterForm from "./pages/Masters/VehicleMaster/AddVehicleMaster/AddEditVehicleMasterForm";
-import DeviceOnboarding from "./pages/Modules/DeviceOnboardings/DeviceOnboarding";
-import AddEditDeviceOnboardingForm from "./pages/Modules/DeviceOnboardings/AddDeviceOnboarding/AddEditDeviceOnboardingForm";
-
-// Groups (Simple groups - Group Modules)
-import Groups from "./pages/Modules/Groups/Groups";
-import AddEditGroupForm from "./pages/Modules/Groups/AddEditGroupForm";
-
-// Groups Master (Complex groups with IMEI)
-import GroupsMaster from "./pages/Masters/GroupMaster/GroupsMaster";
-import AddEditGroupsMasterForm from "./pages/Masters/GroupMaster/AddGroupsMaster/AddEditGroupsMasterForm";
-
-import Roles from "./pages/Modules/Roles/Roles";
-import AddEditRoleForm from "./pages/Modules/Roles/AddRole/AddEditRoleForm";
-import Accounts from "./pages/Modules/Accounts/Accounts";
-import AddEditAccountForm from "./pages/Modules/Accounts/AddAccount/AddEditAccountForm";
-import Users from "./pages/Modules/Users/Users";
-import AddEditUserForm from "./pages/Modules/Users/AddUser/AddEditUserForm";
-import RoadMaster from "./pages/Masters/RoadMaster/RoadMaster";
-import { useTokenExpiry } from "./hooks/useTokenExpiry";
-import DeviceData from "./pages/Modules/DeviceData/DeviceData";
-import AddEditAlertForm from "./pages/Modules/Alerts/AddAlert/AddEditAlertForm";
-import Alerts from "./pages/Modules/Alerts/Alerts";
-import TelecomMaster from "./pages/Masters/TelecomMaster/TelecomMaster";
-import AddEditTelecomMasterForm from "./pages/Masters/TelecomMaster/AddTelecomMaster/AddEditTelecomMasterForm";
-import Geozone from "./pages/Modules/Geozone/Geozone";
-import RouteTable from "./pages/Modules/Routes/component/RouteTable";
-import GeofenceAndRoute from "./pages/Modules/Routes/geofence-and-route";
-import Reports from "./pages/Modules/Reports/Reports";
 import ButtonExamples from "./pages/ButtonExamples";
+import InputExamples from "./pages/InputExamples";
+import LogoLoader from "./pages/LogoLoader";
+
+// Loader Components
+import { LoaderOverlay } from "./components/common/LoaderOverlay";
 
 // Theme Wrapper Component
 const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
@@ -67,44 +65,133 @@ function App() {
   useTokenExpiry();
 
   return (
-    <ThemeProvider>
-      <ThemeInitializer>
-        <Toaster position="top-center" />
-        <AuthProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/styleguide" element={<StyleGuide />} />
-                        <Route path="/selectDemo" element={<SelectDemo />} />
-                        <Route path="/inputDemo" element={<InputDemo />} />
-                        <Route path="/table-demo" element={<DataTableDemo />} />
+    <Provider store={store}>
+      <ThemeProvider>
+        <ThemeInitializer>
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: "var(--bg-surface)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border-default)",
+              },
+              success: {
+                iconTheme: {
+                  primary: "#10B981",
+                  secondary: "#FFFFFF",
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: "#EF4444",
+                  secondary: "#FFFFFF",
+                },
+              },
+              loading: {
+                iconTheme: {
+                  primary: "#2463EB",
+                  secondary: "#FFFFFF",
+                },
+              },
+            }}
+          />
+          <LoaderOverlay />
 
-                        <Route path="/button-demo" element={<ButtonExamples />} />
+          <AuthProvider>
+            <Router>
+              <Routes>
+                {/* Auth Routes */}
+                <Route path="/auth/login" element={<LoginPage />} />
+                <Route path="/auth/enter-otp" element={<EnterOtpPage />} />
+                <Route
+                  path="/auth/forgot-password"
+                  element={<ForgotPasswordPage />}
+                />
+                <Route
+                  path="/auth/reset-password"
+                  element={<ResetPasswordPage />}
+                />
+                <Route
+                  path="/auth/password-changed"
+                  element={<PasswordChangedPage />}
+                />
+                <Route
+                  path="/auth/contact-support"
+                  element={<ContactSupportPage />}
+                />
 
-                        {/* Other routes */}
-                        <Route
-                          path="/settings"
-                          element={
-                            <div className="card card-body">Settings Page</div>
-                          }
-                        />
-                      </Routes>
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </Router>
-        </AuthProvider>
-      </ThemeInitializer>
-    </ThemeProvider>
+                {/* Redirect old login route to new auth system */}
+                <Route
+                  path="/login"
+                  element={<Navigate to="/auth/login" replace />}
+                />
+
+                {/* Protected Routes */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Routes>
+                          {/* Dashboard */}
+                          <Route path="/" element={<Dashboard />} />
+
+                          {/* Demo Pages */}
+                          {/* <Route path="/styleguide" element={<StyleGuide />} />
+                          <Route path="/selectDemo" element={<SelectDemo />} /> */}
+                          <Route
+                            path="/inputDemo"
+                            element={<InputExamples />}
+                          />
+                          <Route
+                            path="/table-demo"
+                            element={<DataTableDemo />}
+                          />
+                          <Route path="/logo-loader" element={<LogoLoader />} />
+                          <Route
+                            path="/button-demo"
+                            element={<ButtonExamples />}
+                          />
+
+                          {/* Settings */}
+                          <Route
+                            path="/settings"
+                            element={
+                              <div className="card card-body">
+                                Settings Page
+                              </div>
+                            }
+                          />
+
+                          {/* Catch-all route for 404 */}
+                          <Route
+                            path="*"
+                            element={
+                              <div className="flex items-center justify-center min-h-[400px]">
+                                <div className="text-center">
+                                  <h1 className="text-4xl font-bold text-text-primary mb-4">
+                                    404
+                                  </h1>
+                                  <p className="text-text-secondary">
+                                    Page not found
+                                  </p>
+                                </div>
+                              </div>
+                            }
+                          />
+                        </Routes>
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </Router>
+          </AuthProvider>
+        </ThemeInitializer>
+      </ThemeProvider>
+    </Provider>
   );
 }
 

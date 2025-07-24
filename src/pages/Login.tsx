@@ -93,7 +93,7 @@ const Login: React.FC = () => {
                 size="lg"
                 className="w-full"
                 disabled={isLoading}
-                isLoading={isLoading}
+              // isLoading={isLoading}
               >
                 {isLoading ? "Signing in..." : "Sign in"}
               </Button>

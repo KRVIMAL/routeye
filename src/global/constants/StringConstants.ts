@@ -17,8 +17,8 @@ export class StringConstants {
   ROAD_MASTER_MODULE = "ROAD_MASTER";
   DEVICE_DATA_MODULE = "DEVICE_DATA";
   ALERTS_MODULE = "ALERTS";
-  GEOZONES="Geozones";
-  ROUTES="Routes"
+  GEOZONES = "Geozones";
+  ROUTES = "Routes"
 
 
   // Navigation
@@ -38,8 +38,8 @@ export class StringConstants {
   USERS = "Users";
   ROAD_MASTER = "Road Master";
   DEVICE_DATA = "Device Data";
-  ALERTS = "Alerts"; 
-  TELECOM_MASTER="Telecom Master"
+  ALERTS = "Alerts";
+  TELECOM_MASTER = "Telecom Master"
 
 
   // Status
@@ -79,7 +79,7 @@ export class StringConstants {
   EDIT_DEVICE_ONBOARDING = "Edit Device On-boarding";
 
 
-    // Telecome Master specific
+  // Telecome Master specific
   ADD_TELECOM_MASTER = "Add Telecom Master";
   UPDATE_TELECOM_MASTER = "Update Telecom Master";
   EDIT_TELECOM_MASTER = "Edit Telecom Master";
@@ -95,7 +95,7 @@ export class StringConstants {
   EDIT_GROUPS_MASTER = "Edit Groups Master";
 
 
-    // Alerts specific - ADD THESE
+  // Alerts specific - ADD THESE
   ADD_ALERT = "Add Alert";
   UPDATE_ALERT = "Update Alert";
   EDIT_ALERT = "Edit Alert";
@@ -229,7 +229,7 @@ export class StringConstants {
   NOTIFICATION_TYPES = "Notification Types";
   CONTACT_DETAILS = "Contact Details";
 
-    // Telecom master form labels 
+  // Telecom master form labels 
   CCID_NUMBER = "CCID Number";
   IMSI_NUMBER = "IMSI Number";
   TELECOM_OPERATOR = "Telecom Operator";
@@ -237,9 +237,9 @@ export class StringConstants {
   NO_OF_NETWORK = "No. Of Network";
   MOBILE_NO_1 = "Mobile Number 1";
   MOBILE_NO_2 = "Mobile Number 2";
-  NETWORK_SUPPORT="Network Support"
-  APN_1="Apn 1"
-  APN_2="Apn 2"
+  NETWORK_SUPPORT = "Network Support"
+  APN_1 = "Apn 1"
+  APN_2 = "Apn 2"
 
 
   // Road Master labels
@@ -269,7 +269,7 @@ export class StringConstants {
   PIMS_FINALIZE_DATE = "PIMS Finalize Date";
 
   // Validation messages
-  REQUIRED_FIELD = "This field is required";
+  // REQUIRED_FIELD = "This field is required";
   INVALID_IP_FORMAT = "Invalid IP Address format";
   INVALID_PORT_RANGE = "Port must be between 1 and 65535";
   INVALID_EMAIL_FORMAT = "Invalid email format";
@@ -280,6 +280,86 @@ export class StringConstants {
   INVALID_LICENSE_FORMAT = "Invalid license format";
   INVALID_IMEI_FORMAT = "IMEI should be 15-17 characters";
   INVALID_PASSWORD_LENGTH = "Password must be at least 6 characters";
+
+
+  // Authentication
+  SIGN_IN = "Sign in";
+  WELCOME_TO = "Welcome to";
+  ROUTEYE = "ROUTEYE";
+  ENTER_USERNAME_EMAIL = "Enter your username or email address";
+  ENTER_PASSWORD = "Enter your Password";
+  REMEMBER_ME = "Remember Me";
+  FORGOT_PASSWORD = "Forgot Password";
+  FORGOT_USERNAME = "Forgot Username?";
+  SIGN_IN_WITH_GOOGLE = "Sign in with Google";
+  DIDNT_HAVE_ACCOUNT = "Did'nt have an account yet?";
+  GET_DEMO = "Get Demo";
+
+  // OTP
+  ENTER_OTP = "Enter OTP";
+  OTP_SENT_MESSAGE = "We have sent an One time password to your number";
+  OTP_SENT_EMAIL_MESSAGE = "We have sent an One time password to your email";
+  RESEND_OTP = "Resend OTP";
+  RESEND_OTP_IN = "Resend OTP in";
+  HAVING_TROUBLE_OTP = "Having Trouble getting OTP?";
+  CONTINUE = "CONTINUE";
+
+  // Forgot Password
+  FORGOT_PASSWORD_TITLE = "Forgot Password";
+  ENTER_USERNAME = "Enter your username or email";
+  FORGOT_PASSWORD_MESSAGE = "We have sent an One time password to reset password to your number";
+
+  // Reset Password
+  REGISTER_NEW_PASSWORD = "Register new password";
+  ENTER_NEW_PASSWORD = "Enter your new password";
+  CONFIRM_NEW_PASSWORD = "Confirm your new password";
+  CHANGE_PASSWORD = "CHANGE PASSWORD";
+
+  // Success Messages
+  PASSWORD_CHANGED_SUCCESS = "Password has been changed successfully!";
+  RETURN_TO_LOGIN = "RETURN TO LOGIN";
+
+  // Contact Support
+  CONTACT_IMZ_SUPPORT = "Contact IMZ Support";
+  SUPPORT_EMAIL = "support@imzcorporate.com";
+  SUPPORT_PHONE = "+91 95396-95396";
+  SUPPORT_MESSAGE = "If you're having trouble accessing your account, don't worry — we're here to help. Make sure you're entering the correct email and password. If you've forgotten your password, use the \"Forgot Password?\" link to reset it securely. Still need help? Reach out to IMZ support team anytime for quick assistance.";
+
+  // Language
+  SELECT_LANGUAGE = "Select Language";
+  ENGLISH = "English";
+
+  // Download App
+  DOWNLOAD_APP = "Download app";
+  TERMS_CONDITIONS = "Terms & Conditions";
+  PRIVACY_POLICY = "Privacy Policy";
+
+  // Validation Messages
+  REQUIRED_FIELD = "This field is required";
+  INVALID_EMAIL = "Please enter a valid email address";
+  INVALID_USERNAME = "Please enter a valid username or email";
+  PASSWORD_REQUIRED = "Password is required";
+  OTP_REQUIRED = "OTP is required";
+  PASSWORDS_DONT_MATCH = "Passwords do not match";
+  INVALID_OTP = "Please enter a valid 6-digit OTP";
+
+  // Error Messages
+  WRONG_CREDENTIALS = "Wrong or unmatched credentials!";
+  PLEASE_ENTER_USERNAME = "Please enter your username or email!";
+
+  // Loading Messages
+  SIGNING_IN = "Signing in...";
+  VERIFYING_OTP = "Verifying OTP...";
+  SENDING_OTP = "Sending OTP...";
+  RESENDING_OTP = "Resending OTP...";
+  CHANGING_PASSWORD = "Changing Password...";
+
+  // Auto-fetch OTP
+  TRYING_AUTO_FETCH = "Trying to auto-fetch OTP";
+
+  // Terms
+  TERMS_MESSAGE = "By pressing continue you agree to our terms and conditions.";
+  RETURN_TO_LOGIN_LINK = "Return to login";
 }
 
 let strings = new StringConstants();
