@@ -37,7 +37,7 @@ export const LoginPage: React.FC = () => {
     const newErrors: Partial<LoginFormData> = {};
 
     if (!formData.username.trim()) {
-      newErrors.username = strings.REQUIRED_FIELD;
+      newErrors.username = strings.USERNAME_OR_EMAIL_REQUIRED;
     }
 
     if (!formData.password.trim()) {
@@ -163,7 +163,7 @@ export const LoginPage: React.FC = () => {
               autoComplete="username"
             />
             {errors.username &&
-              !errors.username.includes(strings.REQUIRED_FIELD) && (
+              !errors.username.includes(strings.USERNAME_OR_EMAIL_REQUIRED) && (
                 <p className="text-sm text-orange-500 mt-1">
                   {strings.PLEASE_ENTER_USERNAME}
                 </p>

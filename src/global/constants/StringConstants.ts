@@ -339,6 +339,7 @@ export class StringConstants {
   INVALID_EMAIL = "Please enter a valid email address";
   INVALID_USERNAME = "Please enter a valid username or email";
   PASSWORD_REQUIRED = "Password is required";
+  USERNAME_OR_EMAIL_REQUIRED = "Username or Email is required";
   OTP_REQUIRED = "OTP is required";
   PASSWORDS_DONT_MATCH = "Passwords do not match";
   INVALID_OTP = "Please enter a valid 6-digit OTP";
