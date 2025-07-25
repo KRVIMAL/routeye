@@ -51,6 +51,7 @@ import LogoLoader from "./pages/LogoLoader";
 import { LoaderOverlay } from "./components/common/LoaderOverlay";
 import { SelectExamples } from "./components/ui/Select/SelectExamples";
 import { AutocompleteExamples } from "./components/ui/Autocomplete/AutocompleteExamples";
+import { CustomTabsExamples } from "./components/ui/CustomTabs/CustomTabsExamples";
 
 // Theme Wrapper Component
 const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
@@ -154,6 +155,10 @@ function App() {
                           <Route
                             path="/autocompleteDemo"
                             element={<AutocompleteExamples />}
+                          />
+                            <Route
+                            path="/customtabDemo"
+                            element={<CustomTabsExamples />}
                           />
                           <Route
                             path="/table-demo"
