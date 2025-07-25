@@ -9,7 +9,7 @@ import {
 import { Provider } from "react-redux";
 import { Toaster } from "react-hot-toast";
 // import "./styles/globals.css";
-import "./styles/global.css"
+import "./styles/global.css";
 
 // Redux Store
 import { store } from "./store/store";
@@ -49,6 +49,8 @@ import LogoLoader from "./pages/LogoLoader";
 
 // Loader Components
 import { LoaderOverlay } from "./components/common/LoaderOverlay";
+import { SelectExamples } from "./components/ui/Select/SelectExamples";
+import { AutocompleteExamples } from "./components/ui/Autocomplete/AutocompleteExamples";
 
 // Theme Wrapper Component
 const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
@@ -121,7 +123,7 @@ function App() {
                   path="/auth/contact-support"
                   element={<ContactSupportPage />}
                 />
-<Route path="/logo-loader" element={<LogoLoader />} />
+                <Route path="/logo-loader" element={<LogoLoader />} />
                 {/* Redirect old login route to new auth system */}
                 <Route
                   path="/login"
@@ -132,7 +134,7 @@ function App() {
                 <Route
                   path="/*"
                   element={
-                    <ProtectedRoute>
+                    // <ProtectedRoute>
                       <Layout>
                         <Routes>
                           {/* Dashboard */}
@@ -145,11 +147,19 @@ function App() {
                             path="/inputDemo"
                             element={<InputExamples />}
                           />
+                           <Route
+                            path="/selectDemo"
+                            element={<SelectExamples />}
+                          />
+                          <Route
+                            path="/autocompleteDemo"
+                            element={<AutocompleteExamples />}
+                          />
                           <Route
                             path="/table-demo"
                             element={<DataTableDemo />}
                           />
-                          
+
                           <Route
                             path="/button-demo"
                             element={<ButtonExamples />}
@@ -183,7 +193,7 @@ function App() {
                           />
                         </Routes>
                       </Layout>
-                    </ProtectedRoute>
+                    // </ProtectedRoute>
                   }
                 />
               </Routes>
