@@ -286,8 +286,8 @@ export class StringConstants {
   SIGN_IN = "Sign in";
   WELCOME_TO = "Welcome to";
   ROUTEYE = "ROUTEYE";
-  ENTER_USERNAME_EMAIL = "Enter your username or email address";
-  ENTER_PASSWORD = "Enter your Password";
+  ENTER_USERNAME_EMAIL = "username or email address";
+  ENTER_PASSWORD = "Password";
   REMEMBER_ME = "Remember Me";
   FORGOT_PASSWORD = "Forgot Password";
   FORGOT_USERNAME = "Forgot Username?";
@@ -306,7 +306,7 @@ export class StringConstants {
 
   // Forgot Password
   FORGOT_PASSWORD_TITLE = "Forgot Password";
-  ENTER_USERNAME = "Enter your username or email";
+  ENTER_USERNAME = "username or email";
   FORGOT_PASSWORD_MESSAGE = "We have sent an One time password to reset password to your number";
 
   // Reset Password

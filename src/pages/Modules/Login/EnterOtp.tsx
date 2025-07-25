@@ -163,7 +163,7 @@ export const EnterOtpPage: React.FC = () => {
   }
 
   return (
-    <AuthLayout showDownloadSection={true} particlesVariant="floating">
+    <AuthLayout showDownloadSection={true} particlesVariant="trail">
       <div className="bg-white rounded-2xl shadow-2xl p-8 backdrop-blur-sm bg-opacity-95">
         {/* Header */}
         <div className="flex items-start justify-between mb-8">

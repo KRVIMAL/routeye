@@ -4,8 +4,8 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import Button from "../components/ui/Button";
-import Input from "../components/ui/Input";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { CustomInput } from "../components/ui/Input";
 // import ThemeToggle from "../components/ThemeToggle";
 
 const Login: React.FC = () => {
@@ -51,7 +51,7 @@ const Login: React.FC = () => {
           <div className="card-body">
             <form className="space-y-lg" onSubmit={handleSubmit}>
               <div className="space-y-md">
-                <Input
+                <CustomInput
                   id="username"
                   label="Username"
                   type="text"
@@ -63,7 +63,7 @@ const Login: React.FC = () => {
                 />
 
                 <div className="relative">
-                  <Input
+                  <CustomInput
                     id="password"
                     label="Password"
                     type={showPassword ? "text" : "password"}

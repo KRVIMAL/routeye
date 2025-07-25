@@ -121,7 +121,7 @@ function App() {
                   path="/auth/contact-support"
                   element={<ContactSupportPage />}
                 />
-
+<Route path="/logo-loader" element={<LogoLoader />} />
                 {/* Redirect old login route to new auth system */}
                 <Route
                   path="/login"
@@ -149,7 +149,7 @@ function App() {
                             path="/table-demo"
                             element={<DataTableDemo />}
                           />
-                          <Route path="/logo-loader" element={<LogoLoader />} />
+                          
                           <Route
                             path="/button-demo"
                             element={<ButtonExamples />}
