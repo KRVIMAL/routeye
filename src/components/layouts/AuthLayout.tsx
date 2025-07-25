@@ -1,19 +1,31 @@
 import { AppDownloadSection } from "../ui/AppDownloadSection";
+import { HexagonParticles } from "../ui/HexagonParticles";
 
-export const AuthLayout: React.FC<AuthLayoutProps> = ({ 
-  children, 
-  showDownloadSection = true  // Change default to true
+interface AuthLayoutProps {
+  children: React.ReactNode;
+  showDownloadSection?: boolean;
+  particlesVariant?: "network" | "trail" | "floating";
+}
+export const AuthLayout: React.FC<AuthLayoutProps> = ({
+  children,
+  showDownloadSection = false,
+  particlesVariant = "trail",
 }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 relative overflow-hidden">
-      {/* Background Pattern/Image */}
-      <div 
+<div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-black relative overflow-hidden">    <HexagonParticles
+        variant={particlesVariant}
+        className="opacity-60"
+        id="auth-particles"
+      />
+
+      {/* Fallback Background Pattern (if particles fail to load) */}
+      <div
         className="absolute inset-0 opacity-20"
         style={{
           backgroundImage: `url('/images/hex-pattern-bg.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }}
       />
 
@@ -25,12 +37,14 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             <AppDownloadSection />
           </div>
         )}
-        
+
         {/* Right Side - Auth Forms */}
-        <div className={`flex items-center justify-center p-4 ${showDownloadSection ? 'lg:w-1/2 w-full' : 'w-full'}`}>
-          <div className="w-full max-w-md">
-            {children}
-          </div>
+        <div
+          className={`flex items-center justify-center p-4 ${
+            showDownloadSection ? "lg:w-1/2 w-full" : "w-full"
+          }`}
+        >
+          <div className="w-full max-w-md relative z-20">{children}</div>
         </div>
       </div>
     </div>
