@@ -251,7 +251,7 @@ export const CustomTabsExamples = () => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-gray-800">Consultants</h3>
             <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Add Consultant
+              Add Device
             </button>
           </div>
 
@@ -265,7 +265,7 @@ export const CustomTabsExamples = () => {
           />
 
           <div className="text-sm text-gray-600">
-            Showing {compactTab.toLowerCase()} consultants
+            Showing {compactTab.toLowerCase()} Devices
           </div>
         </div>
       </div>

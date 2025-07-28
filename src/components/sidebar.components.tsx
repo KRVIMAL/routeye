@@ -27,7 +27,7 @@ const sidebarItems = [
   { name: "customtabs Demo", href: "/customtabDemo", icon: FiFileText },
 
   { name: "Select Demo", href: "/selectdemo", icon: FiFileText },
-
+  { name: "Searcb Demo", href: "/customsearchDemo", icon: FiFileText },
   { name: "Button Demo", href: "/button-demo", icon: FiGrid },
   { name: "Logo", href: "/logo-loader", icon: FiGrid },
 ];

@@ -1,0 +1,26 @@
+export interface CustomSearchProps {
+  id?: string;
+  placeholder?: string;
+  value?: string;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onSearch?: (value: string) => void;
+  onClear?: () => void;
+  disabled?: boolean;
+  className?: string;
+  debounceMs?: number;
+  autoFocus?: boolean;
+  maxLength?: number;
+  loading?: boolean;
+  size?: 'sm' | 'md' | 'lg'|'xs';
+  variant?: 'default' | 'compact';
+  showSearchButton?: boolean;
+  ref?: React.RefObject<HTMLInputElement>;
+}
+
+// types/Search.types.ts - Add this interface
+export interface SearchRef {
+  focus: () => void;
+  blur: () => void;
+  clear: () => void;
+  getValue: () => string;
+}

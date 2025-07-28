@@ -1,4 +1,3 @@
-// types/Tabs.types.ts
 export interface TabConfig {
   label: string;
   count?: number | null;
