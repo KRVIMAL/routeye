@@ -1,3 +1,4 @@
+// types/Search.types.ts - Add these props
 export interface CustomSearchProps {
   id?: string;
   placeholder?: string;
@@ -11,12 +12,20 @@ export interface CustomSearchProps {
   autoFocus?: boolean;
   maxLength?: number;
   loading?: boolean;
-  size?: 'sm' | 'md' | 'lg'|'xs';
+  size?: 'sm' | 'md' | 'lg';
   variant?: 'default' | 'compact';
   showSearchButton?: boolean;
   ref?: React.RefObject<HTMLInputElement>;
+  // New responsive props
+  width?: string | number;
+  height?: string | number;
+  minWidth?: string | number;
+  maxWidth?: string | number;
+  minHeight?: string | number;
+  maxHeight?: string | number;
+  responsive?: boolean;
+  fullWidth?: boolean;
 }
-
 // types/Search.types.ts - Add this interface
 export interface SearchRef {
   focus: () => void;

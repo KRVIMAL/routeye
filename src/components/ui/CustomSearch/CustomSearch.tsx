@@ -34,6 +34,14 @@ export const CustomSearch = forwardRef<SearchRef, CustomSearchProps>(
       size = "md",
       variant = "default",
       showSearchButton = true,
+      width,
+      height,
+      minWidth,
+      maxWidth,
+      minHeight,
+      maxHeight,
+      responsive = true,
+      fullWidth = false,
     },
     ref
   ) => {
@@ -110,60 +118,92 @@ export const CustomSearch = forwardRef<SearchRef, CustomSearchProps>(
       }
     };
 
-    // Size configurations
+    // Update size configurations for responsive design
     const sizeConfig = {
-      xs: {
-        container: "h-8",
-        input: "text-sm px-2",
-        button: "w-4 h-4",
-        icon: "w-2 h-2",
-        clearIcon: "w-2 h-2",
-      },
       sm: {
-        container: "h-12",
-        input: "text-sm px-4",
-        button: "w-10 h-10",
-        icon: "w-4 h-4",
-        clearIcon: "w-3 h-3",
+        container: "h-10", // Default height
+        input: "text-sm px-3 sm:px-4",
+        button: "w-8 h-8 sm:w-10 sm:h-10",
+        icon: "w-3 h-3 sm:w-4 sm:h-4",
+        clearIcon: "w-2 h-2 sm:w-3 sm:h-3",
       },
       md: {
-        container: "h-14",
-        input: "text-base px-5",
-        button: "w-12 h-12",
-        icon: "w-[18px] h-[18px]",
-        clearIcon: "w-[14px] h-[14px]",
+        container: "h-12 sm:h-14", // Responsive height
+        input: "text-sm sm:text-base px-4 sm:px-5",
+        button: "w-10 h-10 sm:w-12 sm:h-12",
+        icon: "w-4 h-4 sm:w-[18px] sm:h-[18px]",
+        clearIcon: "w-3 h-3 sm:w-[14px] sm:h-[14px]",
       },
       lg: {
-        container: "h-16",
-        input: "text-lg px-6",
-        button: "w-14 h-14",
-        icon: "w-5 h-5",
-        clearIcon: "w-4 h-4",
+        container: "h-14 sm:h-16",
+        input: "text-base sm:text-lg px-5 sm:px-6",
+        button: "w-12 h-12 sm:w-14 sm:h-14",
+        icon: "w-4 h-4 sm:w-5 sm:h-5",
+        clearIcon: "w-3 h-3 sm:w-4 sm:h-4",
       },
     };
 
     const currentSize = sizeConfig[size];
 
+    // Generate custom styles for dimensions
+    const customStyles: React.CSSProperties = {
+      fontFamily: "Poppins, sans-serif",
+      ...(width && { width: typeof width === "number" ? `${width}px` : width }),
+      ...(height && {
+        height: typeof height === "number" ? `${height}px` : height,
+      }),
+      ...(minWidth && {
+        minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,
+      }),
+      ...(maxWidth && {
+        maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
+      }),
+      ...(minHeight && {
+        minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight,
+      }),
+      ...(maxHeight && {
+        maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight,
+      }),
+    };
+
+    // Get responsive classes
+    const getResponsiveClasses = () => {
+      let classes = `
+      relative flex items-center bg-white border border-[#4285F4] 
+      rounded-full transition-all duration-200 overflow-hidden
+      ${responsive ? currentSize.container : height ? "" : "h-14"}
+      ${
+        isFocused
+          ? "ring-2 ring-[#4285F4] ring-opacity-20 shadow-lg"
+          : "shadow-sm"
+      }
+      ${disabled ? "opacity-50 cursor-not-allowed bg-gray-50" : ""}
+      ${className}
+    `;
+
+      // Width classes
+      if (fullWidth) {
+        classes += " w-full";
+      } else if (!width) {
+        if (variant === "compact") {
+          classes += " w-full max-w-md";
+        } else {
+          classes += " w-full max-w-[586px]";
+        }
+      }
+
+      // Responsive adjustments
+      if (responsive) {
+        classes += " min-w-[200px] sm:min-w-[300px]";
+      }
+
+      return classes;
+    };
+
     return (
-      <div className={`relative ${className}`}>
+      <div className={`relative ${fullWidth ? "w-full" : ""}`}>
         {/* Main Container */}
-        <div
-          className={`
-          relative flex items-center w-full bg-white border border-[#4285F4] 
-          rounded-full transition-all duration-200 overflow-hidden
-          ${currentSize.container}
-          ${
-            isFocused
-              ? "ring-2 ring-[#4285F4] ring-opacity-20 shadow-lg"
-              : "shadow-sm"
-          }
-          ${disabled ? "opacity-50 cursor-not-allowed bg-gray-50" : ""}
-          ${variant === "compact" ? "max-w-md" : "max-w-[586px]"}
-        `}
-          style={{
-            fontFamily: "Poppins, sans-serif",
-          }}
-        >
+        <div className={getResponsiveClasses()} style={customStyles}>
           {/* Input Field */}
           <input
             ref={inputRef}
@@ -179,15 +219,17 @@ export const CustomSearch = forwardRef<SearchRef, CustomSearchProps>(
             autoFocus={autoFocus}
             maxLength={maxLength}
             className={`
-    flex-1 border-0 outline-none bg-transparent font-medium
-    placeholder-[#808080] text-gray-900 focus:outline-none focus:ring-0
-    ${currentSize.input}
-    ${disabled ? "cursor-not-allowed" : ""}
-  `}
+            flex-1 border-0 outline-none bg-transparent font-medium
+            placeholder-[#808080] text-gray-900 focus:outline-none focus:ring-0
+            ${responsive ? currentSize.input : "text-base px-5"}
+            ${disabled ? "cursor-not-allowed" : ""}
+          `}
             style={{
               fontFamily: "Poppins, sans-serif",
               fontWeight: 500,
-              fontSize: "16px",
+              fontSize: responsive
+                ? "clamp(14px, 2.5vw, 16px)" // Responsive font size
+                : "16px",
               lineHeight: "100%",
               boxShadow: "none",
               outline: "none",
@@ -197,62 +239,64 @@ export const CustomSearch = forwardRef<SearchRef, CustomSearchProps>(
 
           {/* Right Side Icons */}
           <div className="flex items-center pr-1">
-            {/* Show either Clear Button OR Search Button, not both */}
             {hasValue && !loading ? (
-              // Clear Button when there's text
               <button
                 type="button"
                 onClick={handleClear}
                 disabled={disabled}
                 className={`
-        flex items-center justify-center rounded-full bg-[#1F3A8A] 
-        hover:bg-[#1e3a8a] active:bg-[#1e40af] transition-colors duration-150
-        ${currentSize.button}
-        ${
-          disabled
-            ? "cursor-not-allowed opacity-50"
-            : "cursor-pointer shadow-md hover:shadow-lg"
-        }
-      `}
+                flex items-center justify-center rounded-full bg-[#1F3A8A] 
+                hover:bg-[#1e3a8a] active:bg-[#1e40af] transition-colors duration-150
+                ${responsive ? currentSize.button : "w-12 h-12"}
+                ${
+                  disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer shadow-md hover:shadow-lg"
+                }
+              `}
                 aria-label="Clear search"
               >
                 <HiX
-                  className={`${currentSize.icon} text-white`}
+                  className={`${
+                    responsive ? currentSize.icon : "w-[18px] h-[18px]"
+                  } text-white`}
                   style={{ strokeWidth: 2 }}
                 />
               </button>
             ) : loading ? (
-              // Loading Spinner
               <div
                 className={`
-      flex items-center justify-center rounded-full bg-[#1F3A8A]
-      ${currentSize.button}
-    `}
+              flex items-center justify-center rounded-full bg-[#1F3A8A]
+              ${responsive ? currentSize.button : "w-12 h-12"}
+            `}
               >
                 <div
-                  className={`animate-spin rounded-full border-2 border-white border-t-transparent ${currentSize.clearIcon}`}
+                  className={`animate-spin rounded-full border-2 border-white border-t-transparent ${
+                    responsive ? currentSize.clearIcon : "w-[14px] h-[14px]"
+                  }`}
                 />
               </div>
             ) : showSearchButton ? (
-              // Search Button when no text
               <button
                 type="button"
                 onClick={handleSearchClick}
                 disabled={disabled || loading}
                 className={`
-        flex items-center justify-center rounded-full bg-[#1F3A8A] 
-        hover:bg-[#1e3a8a] active:bg-[#1e40af] transition-colors duration-150
-        ${currentSize.button}
-        ${
-          disabled
-            ? "cursor-not-allowed opacity-50"
-            : "cursor-pointer shadow-md hover:shadow-lg"
-        }
-      `}
+                flex items-center justify-center rounded-full bg-[#1F3A8A] 
+                hover:bg-[#1e3a8a] active:bg-[#1e40af] transition-colors duration-150
+                ${responsive ? currentSize.button : "w-12 h-12"}
+                ${
+                  disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer shadow-md hover:shadow-lg"
+                }
+              `}
                 aria-label="Search"
               >
                 <HiSearch
-                  className={`${currentSize.icon} text-white`}
+                  className={`${
+                    responsive ? currentSize.icon : "w-[18px] h-[18px]"
+                  } text-white`}
                   style={{ strokeWidth: 2 }}
                 />
               </button>
