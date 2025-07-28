@@ -23,8 +23,8 @@ const sidebarItems = [
   // { name: "Style Guide", href: "/styleguide", icon: FiUsers },
   // { name: "Select Demo", href: "/selectdemo", icon: FiFileText },
   { name: "Input Demo", href: "/inputdemo", icon: FiFileText },
-    { name: "autocomplete Demo", href: "/autocompleteDemo", icon: FiFileText },
-      { name: "customta Demo", href: "/customtabDemo", icon: FiFileText },
+  { name: "autocomplete Demo", href: "/autocompleteDemo", icon: FiFileText },
+  { name: "customtabs Demo", href: "/customtabDemo", icon: FiFileText },
 
   { name: "Select Demo", href: "/selectdemo", icon: FiFileText },
 

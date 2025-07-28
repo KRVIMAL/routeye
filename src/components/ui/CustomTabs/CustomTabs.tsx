@@ -62,10 +62,20 @@ export const CustomTabs: React.FC<CustomTabsProps> = ({
 
   // Get tab styling based on active state
   const getTabStyles = (isActive: boolean, disabled?: boolean) => {
+    const isStacked = orientation === "vertical-stacked";
+
     const baseStyles = `
-    inline-flex items-center font-bold capitalize transition-all duration-200 cursor-pointer
-    ${currentSize.text} ${currentSize.padding} ${currentSize.gap} ${currentSize.borderRadius}
+    ${
+      isStacked
+        ? "flex flex-col items-center justify-center text-center"
+        : "inline-flex items-center"
+    } 
+    font-bold capitalize transition-all duration-200 cursor-pointer
+    ${currentSize.text} ${currentSize.padding} ${
+      isStacked ? "gap-2" : currentSize.gap
+    } ${currentSize.borderRadius}
     tracking-wider leading-none w-fit
+    ${isStacked ? "min-w-[80px] py-4" : ""}
   `;
 
     if (disabled) {
@@ -76,7 +86,7 @@ export const CustomTabs: React.FC<CustomTabsProps> = ({
       return `${baseStyles} bg-[#1F3A8A] text-white shadow-lg`;
     }
 
-    return `${baseStyles} bg-[#F3F4F6] text-[#4B5563] hover:bg-gray-200 hover:shadow-md`;
+    return `${baseStyles} bg-[#F3F4F6] text-[#4B5563] hover:bg-gray-200 `;
   };
 
   // Get count badge styling
@@ -97,14 +107,17 @@ export const CustomTabs: React.FC<CustomTabsProps> = ({
   const getContainerStyles = () => {
     const baseStyles = `
     ${
-      orientation === "vertical"
+      orientation === "vertical" || orientation === "vertical-stacked"
         ? "flex flex-col space-y-2 items-start"
         : "flex flex-row space-x-2 items-center"
     }
     ${centered && orientation === "horizontal" ? "justify-center" : ""}
     ${scrollable && orientation === "horizontal" ? "overflow-x-auto" : ""}
     ${
-      scrollable && orientation === "vertical" ? "overflow-y-auto max-h-96" : ""
+      scrollable &&
+      (orientation === "vertical" || orientation === "vertical-stacked")
+        ? "overflow-y-auto max-h-96"
+        : ""
     }
     ${className}
   `;
@@ -123,6 +136,7 @@ export const CustomTabs: React.FC<CustomTabsProps> = ({
           const isActive = activeTab === tab.label;
 
           return (
+            // Inside the map function, replace the tab content:
             <div
               key={`${tab.label}-${index}`}
               className={getTabStyles(isActive, tab.disabled)}
@@ -138,21 +152,53 @@ export const CustomTabs: React.FC<CustomTabsProps> = ({
                 }
               }}
             >
-              {/* Tab Icon */}
-              {tab.icon && <span className="flex-shrink-0">{tab.icon}</span>}
+              {/* Stacked Layout */}
+              {orientation === "vertical-stacked" ? (
+                <>
+                  {/* Tab Icon (if any) */}
+                  {tab.icon && (
+                    <span className="flex-shrink-0 mb-1">{tab.icon}</span>
+                  )}
 
-              {/* Tab Label */}
-              <span className="flex-shrink-0 whitespace-nowrap">
-                {tab.label}
-              </span>
+                  {/* Tab Label */}
+                  <span className="flex-shrink-0 whitespace-nowrap">
+                    {tab.label}
+                  </span>
 
-              {/* Count Badge */}
-              {showCounts &&
-                tab.count !== null &&
-                tab.count !== undefined &&
-                tab.count !== 0 && (
-                  <span className={getCountStyles(isActive)}>{tab.count}</span>
-                )}
+                  {/* Count Badge */}
+                  {showCounts &&
+                    tab.count !== null &&
+                    tab.count !== undefined &&
+                    tab.count !== 0 && (
+                      <span className={getCountStyles(isActive)}>
+                        {tab.count}
+                      </span>
+                    )}
+                </>
+              ) : (
+                /* Horizontal/Regular Vertical Layout */
+                <>
+                  {/* Tab Icon */}
+                  {tab.icon && (
+                    <span className="flex-shrink-0">{tab.icon}</span>
+                  )}
+
+                  {/* Tab Label */}
+                  <span className="flex-shrink-0 whitespace-nowrap">
+                    {tab.label}
+                  </span>
+
+                  {/* Count Badge */}
+                  {showCounts &&
+                    tab.count !== null &&
+                    tab.count !== undefined &&
+                    tab.count !== 0 && (
+                      <span className={getCountStyles(isActive)}>
+                        {tab.count}
+                      </span>
+                    )}
+                </>
+              )}
             </div>
           );
         })}

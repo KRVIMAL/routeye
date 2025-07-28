@@ -10,7 +10,7 @@ export interface CustomTabsProps {
   tabConfig: TabConfig[];
   selected: string;
   onChange: (value: string) => void;
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: 'horizontal' | 'vertical' | 'vertical-stacked';
   variant?: 'default' | 'compact';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
