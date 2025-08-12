@@ -1,4 +1,4 @@
-// / src/components/ui/DataTable/TableToolbar.tsx - Complete updated component
+// src/components/ui/DataTable/TableToolbar.tsx - Fixed dropdown backgrounds
 import React, { useState, useRef, useEffect } from "react";
 import {
   FiPlus,
@@ -121,48 +121,6 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
     }));
   };
 
-  // const exportToCSV = () => {
-  //   const visibleCols = columns.filter(
-  //     (col) => visibleColumns[col.field] && col.field !== "actions"
-  //   );
-  //   const headers = visibleCols.map((col) => col.headerName);
-  //   const csvData = rows.map((row) =>
-  //     visibleCols.map((col) => row[col.field] || "")
-  //   );
-
-  //   const csvContent = [headers, ...csvData]
-  //     .map((row) => row.map((cell) => `"${cell}"`).join(","))
-  //     .join("\n");
-
-  //   const blob = new Blob([csvContent], { type: "text/csv" });
-  //   const url = URL.createObjectURL(blob);
-  //   const a = document.createElement("a");
-  //   a.href = url;
-  //   a.download = "table-data.csv";
-  //   a.click();
-  //   URL.revokeObjectURL(url);
-  //   setShowExportMenu(false);
-  // };
-
-  // const exportToExcel = () => {
-  //   const visibleCols = columns.filter(
-  //     (col) => visibleColumns[col.field] && col.field !== "actions"
-  //   );
-  //   const worksheetData = rows.map((row) => {
-  //     const rowData: any = {};
-  //     visibleCols.forEach((col) => {
-  //       rowData[col.headerName] = row[col.field] || "";
-  //     });
-  //     return rowData;
-  //   });
-
-  //   const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-  //   const workbook = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-  //   XLSX.writeFile(workbook, "table-data.xlsx");
-  //   setShowExportMenu(false);
-  // };
-
   const handleShowHideAll = () => {
     const nonActionColumns = columns.filter((col) => col.field !== "actions");
     const allVisible = nonActionColumns.every(
@@ -199,10 +157,6 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
       onColumnVisibilityChange(col.field, !col.hide);
     });
   };
-
-  // Update your TableToolbar.tsx - Add queryParams support to exportData function
-
-  // Updated exportData function - Replace in your TableToolbar.tsx
 
   const exportData = async (format: "csv" | "xlsx" | "pdf") => {
     if (!exportConfig) {
@@ -269,8 +223,9 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
       // toast.error('Export failed. Please try again.');
     }
   };
+
   return (
-    <div className="flex items-center justify-between p-4 border-b border-border-light bg-theme-primary">
+    <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
       <div className="flex items-center space-x-4">
         {/* Add Button */}
         {showAddButton && (
@@ -297,17 +252,10 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
 
           {showColumnMenu && (
             <div
-              className="fixed top-auto left-auto mt-2 w-64 bg-theme-primary border border-border-light rounded-lg shadow-lg z-[9999]"
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                zIndex: 9999,
-              }}
+              className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999]"
             >
-              {" "}
               {/* Search */}
-              <div className="p-3 border-b border-border-light">
+              <div className="p-3 border-b border-gray-200">
                 <CustomInput
                   placeholder="Search columns..."
                   leftIcon={FiSearch}
@@ -316,11 +264,12 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
                   onChange={() => { }}
                 />
               </div>
+              
               {/* Show/Hide All and Reset */}
-              <div className="px-3 py-2 border-b border-border-light flex items-center justify-between">
+              <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
                 <button
                   onClick={handleShowHideAll}
-                  className="text-sm text-primary-500 hover:text-primary-600 font-medium"
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
                   {columns.filter(
                     (col) =>
@@ -332,11 +281,12 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
                 </button>
                 <button
                   onClick={resetColumnVisibility}
-                  className="text-sm text-text-muted hover:text-text-secondary"
+                  className="text-sm text-gray-600 hover:text-gray-700"
                 >
                   Reset
                 </button>
               </div>
+              
               {/* Column List */}
               <div className="p-2 max-h-64 overflow-y-auto">
                 {columns
@@ -344,7 +294,7 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
                   .map((column) => (
                     <label
                       key={column.field}
-                      className="flex items-center space-x-2 p-2 hover:bg-theme-tertiary rounded cursor-pointer"
+                      className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -355,9 +305,9 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
                             e.target.checked
                           )
                         }
-                        className="form-checkbox h-4 w-4 text-primary-600 border-border-medium rounded focus:ring-primary-500"
+                        className="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <span className="text-sm text-text-primary">
+                      <span className="text-sm text-gray-700">
                         {column.headerName}
                       </span>
                     </label>
@@ -377,7 +327,7 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
             <FiFilter className="w-4 h-4" />
             <span>Filter</span>
             {filters.length > 0 && (
-              <span className="ml-1 px-2 py-1 bg-primary-500 text-white text-xs rounded-full">
+              <span className="ml-1 px-2 py-1 bg-blue-500 text-white text-xs rounded-full">
                 {filters.length}
               </span>
             )}
@@ -406,23 +356,23 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
           </Button>
 
           {showExportMenu && exportConfig && (
-            <div className="absolute top-full left-0 mt-2 w-32 bg-theme-primary border border-border-light rounded-lg shadow-lg z-dropdown">
+            <div className="absolute top-full left-0 mt-2 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
               <div className="p-1">
                 <button
                   onClick={() => exportData("csv")}
-                  className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-theme-tertiary rounded"
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                 >
                   CSV
                 </button>
                 <button
                   onClick={() => exportData("xlsx")}
-                  className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-theme-tertiary rounded"
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                 >
                   Excel
                 </button>
                 <button
                   onClick={() => exportData("pdf")}
-                  className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-theme-tertiary rounded"
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                 >
                   PDF
                 </button>

@@ -1,9 +1,10 @@
-// Accounts services with client and parent account relationship mapping
+// accountsServices.ts - Updated Implementation with New API Integration
 import { Row } from "../../../../components/ui/DataTable/types";
 import {
   getRequest,
   postRequest,
   patchRequest,
+  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 import { store } from "../../../../store";
@@ -35,45 +36,102 @@ interface ClientInfo {
   __v: number;
 }
 
-interface ParentAccountInfo {
-  _id: string;
-  accountId?: string;
-  accountName: string;
-  level: number;
-  hierarchyPath: string;
-  client?: ClientInfo;
-}
-
 interface AccountData {
   _id: string;
   accountId?: string;
   accountName: string;
-  parentAccount?: string | ParentAccountInfo;
-  clientId: string;
   level: number;
   hierarchyPath: string;
-  children: string[];
+  client?: ClientInfo;
   status: string;
+  depth?: number;
+  isRoot?: boolean;
+  childrenCount?: number;
+  parentAccount?: string | null;
   createdAt: string;
   updatedAt: string;
-  __v: number;
-  client?: ClientInfo;
-  totalDevices?: number;
 }
 
 interface AccountsListResponse {
+  accounts: AccountData[];
+  pagination: {
+    currentPage: number;
+    limit: number;
+    totalRecords: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+    skip: number;
+  };
+  parentAccount?: any;
+}
+
+interface AccountsFilterResponse {
   data: AccountData[];
   pagination: {
-    page: string | number;
-    limit: string;
+    page: number;
+    limit: number;
     total: number;
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
   };
+  filterCounts?: {
+    statuses?: Array<{ _id: string; count: number }>;
+    levels?: Array<{ _id: number; count: number }>;
+    accountNames?: Array<{ _id: string; count: number }>;
+    clientNames?: Array<{ _id: string; count: number }>;
+    accountIds?: Array<{ _id: string; count: number }>;
+  };
+}
+
+interface FilterOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+interface FilterOptionsResponse {
+  options: FilterOption[];
+  total: number;
 }
 
 // Pagination response interface
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+// Filter interface
+interface Filter {
+  field: string;
+  value: any[];
+  label?: string;
+}
+
+interface FilterSummaryResponse {
+  totalAccounts: number;
+  statuses: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  levels: Array<{
+    count: number;
+    value: number;
+    label: number;
+  }>;
+  accountNames: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+}
 
 // Client for dropdown
 export interface Client {
@@ -92,25 +150,39 @@ export interface Client {
   status: string;
 }
 
-// Account hierarchy response for parent account
-interface AccountHierarchyResponse {
-  _id: string;
-  accountName: string;
-  level: number;
-  hierarchyPath: string;
-  status: string;
-  client: ClientInfo;
-  parentAccount?: ParentAccountInfo;
-}
+// Helper function to get logged-in user account ID
+const getLoggedInAccountId = (): string => {
+   const stateData = localStorage.getItem("routeye-state");
+    const data = JSON.parse(stateData!);
+    // const state = data?.auth;
+  const accountId = data?.auth?.user?.account?._id;
+  if (!accountId) {
+    throw new Error("User account ID not found. Please log in again.");
+  }
+  return accountId;
+};
 
 // Transform API account data to Row format
-const transformAccountToRow = (account: any): Row => {
-  console.log({ account });
+const transformAccountToRow = (account: any, parentAccountsMap?: Map<string, string>): Row => {
+  // Determine parent account name
+  let parentAccountName = "Root Account";
+  if (account.parentAccount) {
+    if (typeof account.parentAccount === 'string') {
+      // If parentAccount is just an ID, try to get name from map
+      parentAccountName = parentAccountsMap?.get(account.parentAccount) || "Parent Account";
+    } else if (typeof account.parentAccount === 'object' && account.parentAccount?.accountName) {
+      // If parentAccount is an object with accountName
+      parentAccountName = account.parentAccount?.accountName;
+    }
+  }
+
   return {
     id: account._id,
     accountId: account.accountId || "N/A",
     accountName: account.accountName,
-    parentAccountName: account?.parentAccount?.accountName || "N/A",
+    level: account.level,
+    hierarchyPath: account.hierarchyPath,
+    parentAccountName: parentAccountName,
     contactName: account.client?.contactName || "N/A",
     email: account.client?.email || "N/A",
     contactNo: account.client?.contactNo || "N/A",
@@ -120,76 +192,53 @@ const transformAccountToRow = (account: any): Row => {
     stateName: account.client?.stateName || "N/A",
     cityName: account.client?.cityName || "N/A",
     remark: account.client?.remark || "N/A",
-    totalDevices: account.totalDevices || 0,
+    childrenCount: account.childrenCount || 0,
     status: account.status,
     createdTime: account.createdAt,
     updatedTime: account.updatedAt,
     inactiveTime: account.updatedAt,
-    // Store IDs for edit functionality
-    parentAccount:
-      typeof account.parentAccount === "object" && account.parentAccount
-        ? account.parentAccount._id
-        : account.parentAccount || "",
-    clientId: account.clientId,
+    // Store additional data for edit functionality
+    parentAccount: account.parentAccount,
+    clientId: account.client?._id || "",
+    depth: account.depth || 0,
+    isRoot: account.isRoot || false,
   };
 };
 
 export const accountServices = {
-  getAll: async (): Promise<Row[]> => {
+  // Default getAll method - uses hierarchy-optimized endpoint
+  getAll: async (
+    page: number = 1,
+    limit: number = 10
+  ): Promise<PaginatedResponse<Row>> => {
     try {
-      const response: any = await getRequest(
-        `${urls.accountsViewPath}/${
-          store.getState()?.auth?.user?.account?._id
-        }/hierarchy-optimized`
+      const accountId = getLoggedInAccountId();
+
+      const response: ApiResponse<AccountsListResponse> = await getRequest(
+        `${urls.accountsViewPath}/${accountId}/hierarchy-optimized`,
+        {
+          page,
+          limit,
+          includeParent: true,
+        }
       );
 
       if (response.success) {
-        // Extract accounts from hierarchy structure
-        const accounts: AccountData[] = [];
+        // Create a map of account IDs to account names for parent resolution
+        const accountsMap = new Map<string, string>();
+        response.data.accounts.forEach(account => {
+          accountsMap.set(account._id, account.accountName);
+        });
 
-        // Add current account
-        accounts.push({
-          _id: response.data._id,
-          accountName: response.data.accountName,
-          accountId: response?.data?.accountId,
-          level: response.data.level,
-          hierarchyPath: response.data.hierarchyPath,
-          client: response.data.client,
-          status: response.data.status,
-          children:
-            response.data.children?.map((child: any) => child._id) || [],
-          clientId: response.data.client?._id || "",
-          createdAt: response.data.createdAt || new Date().toISOString(),
-          updatedAt: response.data.updatedAt || new Date().toISOString(),
-          parentAccount: response.data.parentAccount,
-          __v: 0,
-          totalDevices: 0, // This would come from actual API
-        } as AccountData);
-
-        // Add children accounts
-        if (response.data.children) {
-          response.data.children.forEach((child: any) => {
-            accounts.push({
-              _id: child._id,
-              accountId: child.accountId,
-              accountName: child.accountName,
-              level: child.level,
-              hierarchyPath: child.hierarchyPath,
-              client: child.client,
-              status: child.status,
-              // parentAccount:child.parentAccount,
-              children: child.children || [],
-              clientId: child.client?._id || "",
-              createdAt: child.createdAt || new Date().toISOString(),
-              updatedAt: child.updatedAt || new Date().toISOString(),
-              __v: 0,
-              totalDevices: 0,
-              parentAccount: response.data._id, // Set parent reference
-            } as AccountData);
-          });
-        }
-
-        return accounts.map(transformAccountToRow);
+        return {
+          data: response.data.accounts.map(account => transformAccountToRow(account, accountsMap)),
+          total: response.data.pagination.totalRecords,
+          page: response.data.pagination.currentPage,
+          limit: response.data.pagination.limit,
+          totalPages: response.data.pagination.totalPages,
+          hasNext: response.data.pagination.hasNext,
+          hasPrev: response.data.pagination.hasPrev,
+        };
       } else {
         throw new Error(response.message || "Failed to fetch accounts");
       }
@@ -199,6 +248,175 @@ export const accountServices = {
     }
   },
 
+  // Search accounts using search endpoint
+  search: async (
+    searchText: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<PaginatedResponse<Row>> => {
+    try {
+      const accountId = getLoggedInAccountId();
+
+      if (!searchText.trim()) {
+        return accountServices.getAll(page, limit);
+      }
+
+      const response: ApiResponse<AccountsListResponse> = await getRequest(
+        `${urls.accountsViewPath}/${accountId}/search`,
+        {
+          searchText: searchText.trim(),
+          page,
+          limit,
+        }
+      );
+
+      if (response.success) {
+        // Create a map of account IDs to account names for parent resolution
+        const accountsMap = new Map<string, string>();
+        response.data.accounts.forEach(account => {
+          accountsMap.set(account._id, account.accountName);
+        });
+
+        return {
+          data: response.data.accounts.map(account => transformAccountToRow(account, accountsMap)),
+          total: response.data.pagination.totalRecords,
+          page: response.data.pagination.currentPage,
+          limit: response.data.pagination.limit,
+          totalPages: response.data.pagination.totalPages,
+          hasNext: response.data.pagination.hasNext,
+          hasPrev: response.data.pagination.hasPrev,
+        };
+      } else {
+        throw new Error(response.message || "Search failed");
+      }
+    } catch (error: any) {
+      console.error("Error searching accounts:", error.message);
+      throw new Error(error.message || "Search failed");
+    }
+  },
+
+  // Filter accounts using filter endpoint
+  filter: async (
+    page: number = 1,
+    limit: number = 10,
+    sortField?: string,
+    sortDirection?: "asc" | "desc",
+    filters?: Filter[]
+  ): Promise<PaginatedResponse<Row>> => {
+    try {
+      const payload: any = {
+        page,
+        limit,
+      };
+
+      // Add sorting if provided
+      if (sortField && sortDirection) {
+        payload.sortBy = sortField;
+        payload.sortOrder = sortDirection;
+      }
+
+      // Transform filters to the API format
+      if (filters && filters.length > 0) {
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "level":
+              payload.levels = filter.value.map((v) => parseInt(v));
+              break;
+            case "accountName":
+              payload.accountNames = filter.value;
+              break;
+            case "accountId":
+              payload.accountIds = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
+        });
+      }
+
+      const response: ApiResponse<AccountsFilterResponse> = await postRequest(
+        `${urls.accountsViewPath}/filter`,
+        payload
+      );
+
+      if (response.success) {
+        // Create a map for accounts if needed (filter response might not have full hierarchy)
+        const accountsMap = new Map<string, string>();
+        response.data.data.forEach(account => {
+          accountsMap.set(account._id, account.accountName);
+        });
+
+        return {
+          data: response.data.data.map(account => transformAccountToRow(account, accountsMap)),
+          total: response.data.pagination.total,
+          page: response.data.pagination.page,
+          limit: response.data.pagination.limit,
+          totalPages: response.data.pagination.totalPages,
+          hasNext: response.data.pagination.hasNext,
+          hasPrev: response.data.pagination.hasPrev,
+        };
+      } else {
+        throw new Error(response.message || "Failed to filter accounts");
+      }
+    } catch (error: any) {
+      console.error("Error filtering accounts:", error.message);
+      throw new Error(error.message || "Failed to filter accounts");
+    }
+  },
+
+  // Get filter options for a specific column
+  getFilterOptions: async (
+    column: string,
+    searchText?: string,
+    limit: number = 10
+  ): Promise<FilterOption[]> => {
+    try {
+      const params: any = { column, limit };
+
+      if (searchText && searchText.trim()) {
+        params.search = searchText.trim();
+      }
+
+      const response: ApiResponse<FilterOptionsResponse> = await getRequest(
+        `${urls.accountsViewPath}/filter-options`,
+        params
+      );
+
+      if (response.success) {
+        return response.data.options;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter options");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter options:", error.message);
+      throw new Error(error.message || "Failed to fetch filter options");
+    }
+  },
+
+  // Helper method to parse filter counts from filter API response
+  parseFilterCounts: (filterCounts: any, field: string): FilterOption[] => {
+    const fieldMapping: { [key: string]: string } = {
+      status: "statuses",
+      level: "levels",
+      accountName: "accountNames",
+      clientName: "clientNames",
+      accountId: "accountIds",
+    };
+
+    const apiField = fieldMapping[field] || `${field}s`;
+    const counts = filterCounts[apiField] || [];
+
+    return counts.map((item: any) => ({
+      value: item._id.toString(),
+      label: item._id.toString(),
+      count: item.count,
+    }));
+  },
+
+  // Get account by ID
   getById: async (id: string | number): Promise<Row | null> => {
     try {
       const response: ApiResponse<AccountData> = await getRequest(
@@ -222,13 +440,14 @@ export const accountServices = {
     }
   },
 
+  // Create new account
   create: async (
     accountData: Partial<Row>
   ): Promise<{ account: Row; message: string }> => {
     try {
       const payload = {
         accountName: accountData.accountName,
-        parentAccount: accountData.parentAccount,
+        parentAccount: accountData.parentAccount || getLoggedInAccountId(),
         clientId: accountData.clientId,
         status: accountData.status || "active",
       };
@@ -252,6 +471,7 @@ export const accountServices = {
     }
   },
 
+  // Update account
   update: async (
     id: string | number,
     accountData: Partial<Row>
@@ -268,7 +488,7 @@ export const accountServices = {
         payload.clientId = accountData.clientId;
       if (accountData.status !== undefined) payload.status = accountData.status;
 
-      const response: ApiResponse<AccountData> = await patchRequest(
+      const response: ApiResponse<AccountData> = await putRequest(
         `${urls.accountsViewPath}/${id}`,
         payload
       );
@@ -287,9 +507,10 @@ export const accountServices = {
     }
   },
 
+  // Inactivate account (soft delete)
   inactivate: async (id: string | number): Promise<{ message: string }> => {
     try {
-      const response: ApiResponse<AccountData> = await patchRequest(
+      const response: ApiResponse<any> = await patchRequest(
         `${urls.accountsViewPath}/${id}`,
         {
           status: "inactive",
@@ -309,46 +530,112 @@ export const accountServices = {
     }
   },
 
-  // search: async (
-  //   searchText: string,
-  //   page: number = 1,
-  //   limit: number = 10
-  // ): Promise<PaginatedResponse<Row>> => {
-  //   try {
-  //     if (!searchText.trim()) {
-  //       return accountServices.getAll(page, limit);
-  //     }
+  // Export accounts - Updated to work with filters
+  export: async (filters?: Filter[]): Promise<Blob> => {
+    try {
+      let url = `${urls.accountsViewPath}/export`;
+      let requestOptions: RequestInit = {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      };
 
-  //     const response: ApiResponse<AccountsListResponse> = await getRequest(
-  //       `${urls.accountsViewPath}/search`,
-  //       {
-  //         searchText: searchText.trim(),
-  //         page,
-  //         limit,
-  //       }
-  //     );
+      // If filters exist, use POST method with filter data
+      if (filters && filters.length > 0) {
+        const payload: any = {};
 
-  //     if (response.success) {
-  //       return {
-  //         data: response.data.data.map(transformAccountToRow),
-  //         total: response.data.pagination.total,
-  //         page: typeof response.data.pagination.page === 'string'
-  //           ? parseInt(response.data.pagination.page)
-  //           : response.data.pagination.page,
-  //         limit: parseInt(response.data.pagination.limit),
-  //         totalPages: response.data.pagination.totalPages,
-  //         hasNext: response.data.pagination.hasNext,
-  //         hasPrev: response.data.pagination.hasPrev,
-  //       };
-  //     } else {
-  //       throw new Error(response.message || "Search failed");
-  //     }
-  //   } catch (error: any) {
-  //     console.error("Error searching accounts:", error.message);
-  //     // Fallback to getAll if search endpoint doesn't exist
-  //     return accountServices.getAll(page, limit);
-  //   }
-  // },
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "level":
+              payload.levels = filter.value.map((v) => parseInt(v));
+              break;
+            case "accountName":
+              payload.accountNames = filter.value;
+              break;
+            case "accountId":
+              payload.accountIds = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
+        });
+
+        requestOptions = {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        };
+
+        url = `${urls.accountsViewPath}/export-filtered`;
+      }
+
+      const response = await fetch(url, requestOptions);
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      return await response.blob();
+    } catch (error: any) {
+      console.error("Error exporting accounts:", error.message);
+      throw new Error(error.message || "Failed to export accounts");
+    }
+  },
+
+  // Import accounts
+  import: async (file: File): Promise<{ message: string; errors?: any[] }> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${urls.accountsViewPath}/import`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        return {
+          message: result.message || "Accounts imported successfully",
+          errors: result.errors || [],
+        };
+      } else {
+        throw new Error(result.message || "Failed to import accounts");
+      }
+    } catch (error: any) {
+      console.error("Error importing accounts:", error.message);
+      throw new Error(error.message || "Failed to import accounts");
+    }
+  },
+
+  // Get filter summary for dashboard
+  getFilterSummary: async (): Promise<FilterSummaryResponse> => {
+    try {
+      const response: ApiResponse<FilterSummaryResponse> = await getRequest(
+        `${urls.accountsViewPath}/filter-summary`
+      );
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter summary");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter summary:", error.message);
+      throw new Error(error.message || "Failed to fetch filter summary");
+    }
+  },
 
   // Get clients for dropdown
   getClients: async (): Promise<Client[]> => {
@@ -357,7 +644,7 @@ export const accountServices = {
         urls.clientsViewPath,
         {
           page: 1,
-          limit: 0, // Get all records
+          limit: 999999, // Get all records
         }
       );
 
@@ -375,40 +662,18 @@ export const accountServices = {
   },
 
   // Get account hierarchy for parent account
-  getAccountHierarchy: async (): Promise<{
-    parentAccount: ParentAccountInfo | null;
-    currentAccount: ParentAccountInfo | null;
-  }> => {
+  getAccountHierarchy: async (): Promise<any> => {
     try {
-      const response: ApiResponse<AccountHierarchyResponse> = await getRequest(
-        `${urls.accountsViewPath}/${
-          store.getState()?.auth?.user?.account?._id
-        }/hierarchy-optimized`
+      const accountId = getLoggedInAccountId();
+      const response: ApiResponse<AccountsListResponse> = await getRequest(
+        `${urls.accountsViewPath}/${accountId}/hierarchy-optimized`,
+        {
+          includeParent: true,
+        }
       );
 
       if (response.success) {
-        let parentAccount = null;
-        let currentAccount = null;
-
-        // If parentAccount is empty, this account itself is the parent
-        if (
-          !response.data.parentAccount ||
-          Object.keys(response.data.parentAccount).length === 0
-        ) {
-          currentAccount = {
-            _id: response.data._id,
-            accountName: response.data.accountName,
-            level: response.data.level,
-            hierarchyPath: response.data.hierarchyPath,
-          };
-        } else {
-          parentAccount = response.data.parentAccount;
-        }
-
-        return {
-          parentAccount,
-          currentAccount,
-        };
+        return response.data;
       } else {
         throw new Error(
           response.message || "Failed to fetch account hierarchy"
@@ -416,7 +681,7 @@ export const accountServices = {
       }
     } catch (error: any) {
       console.error("Error fetching account hierarchy:", error.message);
-      return { parentAccount: null, currentAccount: null };
+      throw new Error(error.message || "Failed to fetch account hierarchy");
     }
   },
 };

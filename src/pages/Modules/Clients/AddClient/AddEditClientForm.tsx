@@ -10,6 +10,8 @@ import strings from "../../../../global/constants/StringConstants";
 import urls from "../../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
 import { tabTitle } from "../../../../utils/tab-title";
+import ProgressBar from "../../../../components/ui/ProgressBar";
+import Button from "../../../../components/ui/Button";
 
 // Form state type
 interface ClientFormState {
@@ -164,6 +166,66 @@ const AddEditClientForm: React.FC = () => {
     },
   ];
 
+  // Update this function to count only required fields
+  const calculateProgress = () => {
+    // Define which fields are required
+    const requiredFields = [
+      "name",
+      "contactName",
+      "email",
+      "contactNo",
+      "panNumber",
+      "aadharNumber",
+      "gstNumber",
+      "stateName",
+      "cityName",
+      "status",
+    ] as (keyof ClientFormState)[];
+
+    const filledRequiredFields = requiredFields.filter((fieldName) => {
+      const field = formData[fieldName];
+      const value = field.value;
+      return (
+        value !== null && value !== undefined && String(value).trim() !== ""
+      );
+    }).length;
+
+    const totalRequiredFields = requiredFields.length;
+    const progress =
+      totalRequiredFields > 0
+        ? Math.round((filledRequiredFields / totalRequiredFields) * 100)
+        : 0;
+
+    // Debug log to check calculation
+    console.log("Progress calculation (required fields only):", {
+      filledRequiredFields,
+      totalRequiredFields,
+      progress,
+      requiredFieldValues: requiredFields.map((field) => ({
+        field,
+        value: formData[field].value,
+        filled: String(formData[field].value).trim() !== "",
+      })),
+    });
+
+    return progress;
+  };
+
+  const getProgressMessage = () => {
+    const progress = calculateProgress();
+    if (progress === 0) return "You are about to add a new client.";
+    if (progress < 50)
+      return "Please continue filling the required fields to proceed.";
+    if (progress < 100)
+      return "Almost done! Complete the remaining required fields.";
+    return "All required fields completed! You can now save the client.";
+  };
+
+  // Add this helper function to check if form is complete
+  const isFormComplete = () => {
+    return calculateProgress() === 100;
+  };
+
   useEffect(() => {
     if (isEdit && id) {
       // Get data from navigation state first, fallback to API
@@ -201,8 +263,8 @@ const AddEditClientForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: e.target.value,
-          error: "", // Clear error when user types
+          value: e.target.value, // This will be empty string when cleared
+          error: "",
         },
       }));
     };
@@ -212,7 +274,7 @@ const AddEditClientForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: value as string,
+          value: value === null ? "" : (value as string), // Convert null to empty string
           error: "",
         },
       }));
@@ -498,179 +560,242 @@ const AddEditClientForm: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-secondary">
+    <div className="min-h-screen bg-theme-secondary rounded-t-[24px] overflow-hidden flex flex-col">
       <ModuleHeader
         title={isEdit ? strings.EDIT_CLIENT : strings.ADD_CLIENT}
         breadcrumbs={breadcrumbs}
-        showCancelButton
-        showSaveButton
-        onSaveClick={handleSave}
-        onCancelClick={handleCancel}
-        saveText={saving ? "Saving..." : "Save"}
+        className="rounded-t-[24px]"
+        titleClassName="module-title-custom" // Add this prop
       />
+      {/* Main content area */}
+      <div className="flex-1">
+        <div className="p-6">
+          <Card className="p-6 !rounded-[24px]">
+            <Card.Body className="p-6">
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <CustomInput
+                    label="Client Name"
+                    value={formData.name.value}
+                    onChange={handleInputChange("name")}
+                    onBlur={handleBlur("name")}
+                    required
+                    placeholder="Enter client name"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.name.error}
+                  />
+                </div>
 
-      <div className="p-6">
-        <Card>
-          <Card.Body className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <CustomInput
-                  label="Client Name"
-                  value={formData.name.value}
-                  onChange={handleInputChange("name")}
-                  onBlur={handleBlur("name")}
-                  required
-                  placeholder="Enter client name"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.name.error}
-                />
+                <div>
+                  <CustomInput
+                    label="Contact Name"
+                    value={formData.contactName.value}
+                    onChange={handleInputChange("contactName")}
+                    onBlur={handleBlur("contactName")}
+                    required
+                    placeholder="Enter contact name"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.contactName.error}
+                  />
+                </div>
+
+                <div>
+                  <CustomInput
+                    label="Email ID"
+                    type="email"
+                    value={formData.email.value}
+                    onChange={handleInputChange("email")}
+                    onBlur={handleBlur("email")}
+                    required
+                    placeholder="Enter email address"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.email.error}
+                  />
+                </div>
+
+                <div>
+                  <CustomInput
+                    label="Contact No"
+                    value={formData.contactNo.value}
+                    onChange={handleInputChange("contactNo")}
+                    maxLength={10}
+                    onBlur={handleBlur("contactNo")}
+                    required
+                    placeholder="Enter contact number"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.contactNo.error}
+                  />
+                </div>
+
+                <div>
+                  <CustomInput
+                    label="Pan Number"
+                    value={formData.panNumber.value}
+                    onChange={handleInputChange("panNumber")}
+                    onBlur={handleBlur("panNumber")}
+                    maxLength={10}
+                    required
+                    placeholder="ABCDE1234F"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.panNumber.error}
+                  />
+                </div>
+
+                <div>
+                  <CustomInput
+                    label="Aadhar Number"
+                    value={formData.aadharNumber.value}
+                    onChange={handleInputChange("aadharNumber")}
+                    onBlur={handleBlur("aadharNumber")}
+                    maxLength={12}
+                    required
+                    placeholder="123456789012"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.aadharNumber.error}
+                  />
+                </div>
+
+                <div>
+                  <CustomInput
+                    label="GST Number"
+                    value={formData.gstNumber.value}
+                    onChange={handleInputChange("gstNumber")}
+                    onBlur={handleBlur("gstNumber")}
+                    maxLength={15}
+                    required
+                    placeholder="22AAAAA0000A1Z5"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.gstNumber.error}
+                  />
+                </div>
+
+                <div>
+                  <Select
+                    label="State Name"
+                    options={stateOptions}
+                    value={formData.stateName.value}
+                    onChange={handleSelectChange("stateName")}
+                    placeholder="Select State"
+                    required
+                    disabled={saving}
+                    error={formData.stateName.error}
+                  />
+                </div>
+
+                <div>
+                  <CustomInput
+                    label="City Name"
+                    value={formData.cityName.value}
+                    onChange={handleInputChange("cityName")}
+                    onBlur={handleBlur("cityName")}
+                    required
+                    placeholder="Enter city name"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.cityName.error}
+                  />
+                </div>
+
+                <div>
+                  <Select
+                    label="Status"
+                    options={statusOptions}
+                    value={formData.status.value}
+                    onChange={handleSelectChange("status")}
+                    placeholder="Select Status"
+                    required
+                    disabled={saving}
+                    searchable={false}
+                    error={formData.status.error}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <CustomInput
+                    label="Remark"
+                    value={formData.remark.value}
+                    onChange={handleInputChange("remark")}
+                    placeholder="Enter remark (optional)"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.remark.error}
+                  />
+                </div>
               </div>
 
-              <div>
-                <CustomInput
-                  label="Contact Name"
-                  value={formData.contactName.value}
-                  onChange={handleInputChange("contactName")}
-                  onBlur={handleBlur("contactName")}
-                  required
-                  placeholder="Enter contact name"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.contactName.error}
-                />
-              </div>
+              {/* Progress Bar Section - Inside Card */}
+              <div className="mt-16">
+                <ProgressBar value={calculateProgress()} animated={true} />
 
-              <div>
-                <CustomInput
-                  label="Email ID"
-                  type="email"
-                  value={formData.email.value}
-                  onChange={handleInputChange("email")}
-                  onBlur={handleBlur("email")}
-                  required
-                  placeholder="Enter email address"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.email.error}
-                />
-              </div>
+                {/* Message and Buttons on same line - Inside Card */}
+                <div className="flex items-center justify-between mt-4">
+                  {/* Progress Message */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#1F3A8A] flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    </div>
+                    <p className="text-sm text-[#1F3A8A] font-medium">
+                      {getProgressMessage()}
+                    </p>
+                  </div>
 
-              <div>
-                <CustomInput
-                  label="Contact No"
-                  value={formData.contactNo.value}
-                  onChange={handleInputChange("contactNo")}
-                  maxLength={10}
-                  onBlur={handleBlur("contactNo")}
-                  required
-                  placeholder="Enter contact number"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.contactNo.error}
-                />
-              </div>
+                  {/* Action Buttons - Update the Save button */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#F3F4F6",
+                        text: "#374151",
+                        border: "#E5E7EB",
+                        hover: { background: "#F1F1F1" },
+                      }}
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="btn-custom-hover border"
+                      size="lg"
+                    >
+                      Cancel
+                    </Button>
 
-              <div>
-                <CustomInput
-                  label="Pan Number"
-                  value={formData.panNumber.value}
-                  onChange={handleInputChange("panNumber")}
-                  onBlur={handleBlur("panNumber")}
-                  maxLength={10}
-                  required
-                  placeholder="ABCDE1234F"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.panNumber.error}
-                />
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#1F3A8A",
+                        text: "#FFFFFF",
+                        hover: { background: "#1D40B0" },
+                      }}
+                      onClick={handleSave}
+                      loading={saving}
+                      disabled={saving || !isFormComplete()} // Disable if saving OR form incomplete
+                      className="btn-custom-hover"
+                      size="lg"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
               </div>
-
-              <div>
-                <CustomInput
-                  label="Aadhar Number"
-                  value={formData.aadharNumber.value}
-                  onChange={handleInputChange("aadharNumber")}
-                  onBlur={handleBlur("aadharNumber")}
-                  maxLength={12}
-                  required
-                  placeholder="123456789012"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.aadharNumber.error}
-                />
-              </div>
-
-              <div>
-                <CustomInput
-                  label="GST Number"
-                  value={formData.gstNumber.value}
-                  onChange={handleInputChange("gstNumber")}
-                  onBlur={handleBlur("gstNumber")}
-                  maxLength={15}
-                  required
-                  placeholder="22AAAAA0000A1Z5"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.gstNumber.error}
-                />
-              </div>
-
-              <div>
-                <Select
-                  label="State Name"
-                  options={stateOptions}
-                  value={formData.stateName.value}
-                  onChange={handleSelectChange("stateName")}
-                  placeholder="Select State"
-                  required
-                  disabled={saving}
-                  error={formData.stateName.error}
-                />
-              </div>
-
-              <div>
-                <CustomInput
-                  label="City Name"
-                  value={formData.cityName.value}
-                  onChange={handleInputChange("cityName")}
-                  onBlur={handleBlur("cityName")}
-                  required
-                  placeholder="Enter city name"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.cityName.error}
-                />
-              </div>
-
-              <div>
-                <Select
-                  label="Status"
-                  options={statusOptions}
-                  value={formData.status.value}
-                  onChange={handleSelectChange("status")}
-                  placeholder="Select Status"
-                  required
-                  disabled={saving}
-                  error={formData.status.error}
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <CustomInput
-                  label="Remark"
-                  value={formData.remark.value}
-                  onChange={handleInputChange("remark")}
-                  placeholder="Enter remark (optional)"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.remark.error}
-                />
-              </div>
-            </div>
-          </Card.Body>
-        </Card>
+            </Card.Body>
+          </Card>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#1F3A8A] text-white py-4">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center text-sm">
+            Routeye software - All rights reserved - © 2025
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

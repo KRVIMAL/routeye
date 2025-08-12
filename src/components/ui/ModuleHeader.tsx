@@ -1,4 +1,4 @@
-// src/components/ui/ModuleHeader.tsx - Custom header for modules
+// src/components/ui/ModuleHeader.tsx - Updated without action buttons for form pages
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiArrowLeft } from "react-icons/fi";
@@ -35,7 +35,7 @@ interface ModuleHeaderProps {
   tabs?: TabItem[];
   onTabChange?: (key: string) => void;
 
-  // For detail pages
+  // For detail pages (these will be ignored in the new layout)
   showBackButton?: boolean;
   showCancelButton?: boolean;
   showSaveButton?: boolean;
@@ -56,6 +56,8 @@ interface ModuleHeaderProps {
   headerTabs?: ModuleHeaderTab[];
   activeHeaderTab?: string;
   onHeaderTabChange?: (tabId: string) => void;
+  titleClassName?: string;
+  titleStyle?: React.CSSProperties;
 }
 
 const ModuleHeader: React.FC<ModuleHeaderProps> = ({
@@ -73,18 +75,9 @@ const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   tabs,
   onTabChange,
 
-  // Detail page props
+  // Detail page props (ignored in new layout)
   showBackButton = false,
-  showCancelButton = false,
-  showSaveButton = false,
-  showNextButton = false,
   onBackClick,
-  onCancelClick,
-  onSaveClick,
-  onNextClick,
-  cancelText = "Cancel",
-  saveText = "Save",
-  nextText = "Next",
 
   customActions,
   className = "",
@@ -92,20 +85,14 @@ const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   headerTabs,
   activeHeaderTab,
   onHeaderTabChange,
+  titleClassName,
+  titleStyle,
 }) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
     if (onBackClick) {
       onBackClick();
-    } else {
-      navigate(-1);
-    }
-  };
-
-  const handleCancel = () => {
-    if (onCancelClick) {
-      onCancelClick();
     } else {
       navigate(-1);
     }
@@ -137,12 +124,18 @@ const ModuleHeader: React.FC<ModuleHeaderProps> = ({
                 <FiArrowLeft className="w-4 h-4" />
               </Button>
             )}
-
             {/* Title */}
-            <h1 className="text-heading-1 text-text-primary">{title}</h1>
+            <h1
+              className={`text-heading-1 text-text-primary ${
+                titleClassName || ""
+              }`}
+              style={titleStyle}
+            >
+              {title}
+            </h1>{" "}
           </div>
 
-          {/* Right Side Actions */}
+          {/* Right Side Actions - Only for list pages */}
           <div className="flex items-center space-x-4">
             {/* Search */}
             {showSearch && (
@@ -167,29 +160,6 @@ const ModuleHeader: React.FC<ModuleHeaderProps> = ({
                 <FiPlus className="w-4 h-4" />
                 <span>{addButtonText}</span>
               </Button>
-            )}
-
-            {/* Detail Page Buttons */}
-            {(showCancelButton || showSaveButton || showNextButton) && (
-              <div className="flex items-center space-x-3">
-                {showCancelButton && (
-                  <Button variant="secondary" onClick={handleCancel}>
-                    {cancelText}
-                  </Button>
-                )}
-
-                {showSaveButton && (
-                  <Button variant="primary" onClick={onSaveClick}>
-                    {saveText}
-                  </Button>
-                )}
-
-                {showNextButton && (
-                  <Button variant="primary" onClick={onNextClick}>
-                    {nextText}
-                  </Button>
-                )}
-              </div>
             )}
 
             {/* Custom Actions */}
@@ -229,6 +199,8 @@ const ModuleHeader: React.FC<ModuleHeaderProps> = ({
           </div>
         )}
       </div>
+
+      {/* Header Tabs */}
       {headerTabs && headerTabs.length > 0 && (
         <div className="px-6 pb-4">
           <div className="flex space-x-2">

@@ -1,4 +1,4 @@
-// src/components/ui/DataTable/FilterComponent.tsx - Enhanced with better UX
+// src/components/ui/DataTable/FilterComponent.tsx - Fixed with white background
 import React, { useState, useRef, useEffect } from "react";
 import { FiX, FiPlus, FiFilter } from "react-icons/fi";
 import Button from "../Button";
@@ -172,24 +172,18 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
   return (
     <div
       ref={filterRef}
-      className="fixed bg-theme-primary border border-border-light rounded-lg shadow-xl w-96 z-[10000]"
-      style={{
-        top: `${
-          (anchorRef.current?.getBoundingClientRect().bottom || 0) + 8
-        }px`,
-        left: `${anchorRef.current?.getBoundingClientRect().left || 0}px`,
-      }}
+      className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg w-96 z-50"
     >
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <FiFilter className="w-4 h-4 text-primary-500" />
-            <h3 className="text-lg font-semibold text-text-primary">Filters</h3>
+            <FiFilter className="w-4 h-4 text-blue-500" />
+            <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-theme-tertiary text-text-muted hover:text-text-primary"
+            className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
           >
             <FiX className="w-4 h-4" />
           </button>
@@ -198,7 +192,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
         {/* Filters List */}
         <div className="space-y-3 max-h-80 overflow-y-auto">
           {localFilters.length === 0 ? (
-            <div className="text-center py-8 text-text-muted">
+            <div className="text-center py-8 text-gray-500">
               <FiFilter className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No filters applied</p>
               <p className="text-sm">Click "Add Filter" to get started</p>
@@ -207,16 +201,16 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
             localFilters.map((filter, index) => (
               <div
                 key={filter.id}
-                className="p-3 border border-border-light rounded-lg bg-theme-secondary space-y-3"
+                className="p-3 border border-gray-200 rounded-lg bg-gray-50 space-y-3"
               >
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-text-secondary">
+                  <span className="text-sm font-medium text-gray-700">
                     Filter {index + 1}
                   </span>
                   <button
                     onClick={() => removeFilter(filter.id)}
-                    className="p-1 rounded hover:bg-theme-tertiary text-text-muted hover:text-red-500"
+                    className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500"
                     title="Remove filter"
                   >
                     <FiX className="w-3 h-3" />
@@ -225,7 +219,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
 
                 {/* Column Selection */}
                 <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Column
                   </label>
                   <Select
@@ -243,7 +237,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
 
                 {/* Operator Selection */}
                 <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Operator
                   </label>
                   <Select
@@ -262,7 +256,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
                 {/* Value Input (hide for isEmpty/isNotEmpty) */}
                 {!["isEmpty", "isNotEmpty"].includes(filter.operator) && (
                   <div>
-                    <label className="block text-xs font-medium text-text-secondary mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Value
                     </label>
                     <CustomInput
@@ -281,7 +275,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col space-y-2 mt-4 pt-4 border-t border-border-light">
+        <div className="flex flex-col space-y-2 mt-4 pt-4 border-t border-gray-200">
           {/* Add Filter Button */}
           <Button
             variant="secondary"
@@ -321,8 +315,8 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
 
         {/* Filter Summary */}
         {localFilters.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-border-light">
-            <p className="text-xs text-text-muted">
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <p className="text-xs text-gray-500">
               {localFilters.length} filter{localFilters.length !== 1 ? "s" : ""}{" "}
               will be applied
             </p>

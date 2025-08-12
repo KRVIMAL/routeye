@@ -247,7 +247,7 @@ export const CustomSearch = forwardRef<SearchRef, CustomSearchProps>(
                 className={`
                 flex items-center justify-center rounded-full bg-[#1F3A8A] 
                 hover:bg-[#1e3a8a] active:bg-[#1e40af] transition-colors duration-150
-                ${responsive ? currentSize.button : "w-12 h-12"}
+                ${responsive ? currentSize.button : "w-8 h-8"}
                 ${
                   disabled
                     ? "cursor-not-allowed opacity-50"
@@ -284,7 +284,7 @@ export const CustomSearch = forwardRef<SearchRef, CustomSearchProps>(
                 className={`
                 flex items-center justify-center rounded-full bg-[#1F3A8A] 
                 hover:bg-[#1e3a8a] active:bg-[#1e40af] transition-colors duration-150
-                ${responsive ? currentSize.button : "w-12 h-12"}
+                ${responsive ? currentSize.button : "w-8 h-8"}
                 ${
                   disabled
                     ? "cursor-not-allowed opacity-50"

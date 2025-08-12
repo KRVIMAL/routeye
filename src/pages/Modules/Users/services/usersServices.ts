@@ -1,9 +1,10 @@
-// Users services with complex account/group and role relationship mapping
+// usersServices.ts - Fixed Implementation with Filter API Integration
 import { Row } from "../../../../components/ui/DataTable/types";
 import {
   getRequest,
   postRequest,
   patchRequest,
+  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 import { store } from "../../../../store";
@@ -44,13 +45,36 @@ interface UserData {
 interface UsersListResponse {
   data: UserData[];
   pagination: {
-    page: number;
-    limit: number;
+    page: string | number;
+    limit: string | number;
     total: number;
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
   };
+  filterCounts?: {
+    statuses?: Array<{ _id: string; count: number }>;
+    accountNames?: Array<{ _id: string; count: number }>;
+    groupNames?: Array<{ _id: string; count: number }>;
+    roleNames?: Array<{ _id: string; count: number }>;
+    usernames?: Array<{ _id: string; count: number }>;
+    emails?: Array<{ _id: string; count: number }>;
+    contactNos?: Array<{ _id: string; count: number }>;
+    firstNames?: Array<{ _id: string; count: number }>;
+    lastNames?: Array<{ _id: string; count: number }>;
+    userIds?: Array<{ _id: string; count: number }>;
+  };
+}
+
+interface FilterOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+interface FilterOptionsResponse {
+  options: FilterOption[];
+  total: number;
 }
 
 // Pagination response interface
@@ -62,6 +86,42 @@ interface PaginatedResponse<T> {
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
+}
+
+// Filter interface
+interface Filter {
+  field: string;
+  value: any[];
+  label?: string;
+}
+
+interface FilterSummaryResponse {
+  totalUsers: number;
+  statuses: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  accountNames: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  groupNames: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  roleNames: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  twoFAStatuses: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
 }
 
 // Role interface for dropdown
@@ -152,25 +212,88 @@ const flattenAccountHierarchy = (
 };
 
 export const userServices = {
+  // Updated getAll method - now uses filter API exclusively
   getAll: async (
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    searchText?: string,
+    sortField?: string,
+    sortDirection?: "asc" | "desc",
+    filters?: Filter[]
   ): Promise<PaginatedResponse<Row>> => {
     try {
-      const response: ApiResponse<UsersListResponse> = await getRequest(
-        urls.usersViewPath,
-        {
-          page,
-          limit,
-        }
+      const payload: any = {
+        page,
+        limit,
+      };
+
+      // Add search if provided
+      if (searchText && searchText.trim()) {
+        payload.searchText = searchText.trim();
+      }
+
+      // Add sorting if provided
+      if (sortField && sortDirection) {
+        payload.sortBy = sortField;
+        payload.sortOrder = sortDirection;
+      }
+
+      // Transform filters to the API format
+      if (filters && filters.length > 0) {
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "accountOrGroup":
+              // This is complex - might need to split into accounts/groups
+              payload.accountNames = filter.value;
+              break;
+            case "username":
+              payload.usernames = filter.value;
+              break;
+            case "firstName":
+              payload.firstNames = filter.value;
+              break;
+            case "lastName":
+              payload.lastNames = filter.value;
+              break;
+            case "email":
+              payload.emails = filter.value;
+              break;
+            case "contactNo":
+              payload.contactNos = filter.value;
+              break;
+            case "userRole":
+              payload.roleNames = filter.value;
+              break;
+            case "userId":
+              payload.userIds = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
+        });
+      }
+
+      // Always use the filter endpoint
+      const response: ApiResponse<UsersListResponse> = await postRequest(
+        `${urls.usersViewPath}/filter`,
+        payload
       );
 
       if (response.success) {
         return {
           data: response.data.data.map(transformUserToRow),
           total: response.data.pagination.total,
-          page: response.data.pagination.page,
-          limit: response.data.pagination.limit,
+          page:
+            typeof response.data.pagination.page === "string"
+              ? parseInt(response.data.pagination.page)
+              : response.data.pagination.page,
+          limit:
+            typeof response.data.pagination.limit === "string"
+              ? parseInt(response.data.pagination.limit)
+              : response.data.pagination.limit,
           totalPages: response.data.pagination.totalPages,
           hasNext: response.data.pagination.hasNext,
           hasPrev: response.data.pagination.hasPrev,
@@ -182,6 +305,59 @@ export const userServices = {
       console.error("Error fetching users:", error.message);
       throw new Error(error.message || "Failed to fetch users");
     }
+  },
+
+  // Get filter options for a specific column
+  getFilterOptions: async (
+    column: string,
+    searchText?: string,
+    limit: number = 10
+  ): Promise<FilterOption[]> => {
+    try {
+      const params: any = { column, limit };
+
+      if (searchText && searchText.trim()) {
+        params.search = searchText.trim();
+      }
+
+      const response: ApiResponse<FilterOptionsResponse> = await getRequest(
+        `${urls.usersViewPath}/filter-options`,
+        params
+      );
+
+      if (response.success) {
+        return response.data.options;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter options");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter options:", error.message);
+      throw new Error(error.message || "Failed to fetch filter options");
+    }
+  },
+
+  // Helper method to parse filter counts from filter API response
+  parseFilterCounts: (filterCounts: any, field: string): FilterOption[] => {
+    const fieldMapping: { [key: string]: string } = {
+      status: "statuses",
+      accountOrGroup: "accountNames",
+      username: "usernames",
+      firstName: "firstNames",
+      lastName: "lastNames",
+      email: "emails",
+      contactNo: "contactNos",
+      userRole: "roleNames",
+      userId: "userIds",
+    };
+
+    const apiField = fieldMapping[field] || `${field}s`;
+    const counts = filterCounts[apiField] || [];
+
+    return counts.map((item: any) => ({
+      value: item._id.toString(),
+      label: item._id.toString(),
+      count: item.count,
+    }));
   },
 
   getById: async (id: string | number): Promise<Row | null> => {
@@ -216,7 +392,7 @@ export const userServices = {
         firstName: userData.firstName,
         middleName: userData.middleName || "",
         lastName: userData.lastName,
-        password: userData.password || "defaultPassword123", // You may want to handle this differently
+        password: userData.password || "defaultPassword123",
         email: userData.email,
         contactNo: userData.contactNo,
         roleId: userData.roleId,
@@ -280,7 +456,7 @@ export const userServices = {
         payload.accountId = null;
       }
 
-      const response: ApiResponse<UserData> = await patchRequest(
+      const response: ApiResponse<UserData> = await putRequest(
         `${urls.usersViewPath}/${id}`,
         payload
       );
@@ -301,7 +477,7 @@ export const userServices = {
 
   inactivate: async (id: string | number): Promise<{ message: string }> => {
     try {
-      const response: ApiResponse<UserData> = await patchRequest(
+      const response: ApiResponse<any> = await patchRequest(
         `${urls.usersViewPath}/${id}`,
         {
           status: "inactive",
@@ -321,42 +497,136 @@ export const userServices = {
     }
   },
 
+  // Export users - Updated to work with filters
+  export: async (filters?: Filter[]): Promise<Blob> => {
+    try {
+      let url = `${urls.usersViewPath}/export`;
+      let requestOptions: RequestInit = {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      };
+
+      // If filters exist, use POST method with filter data
+      if (filters && filters.length > 0) {
+        const payload: any = {};
+
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "accountOrGroup":
+              payload.accountNames = filter.value;
+              break;
+            case "username":
+              payload.usernames = filter.value;
+              break;
+            case "firstName":
+              payload.firstNames = filter.value;
+              break;
+            case "lastName":
+              payload.lastNames = filter.value;
+              break;
+            case "email":
+              payload.emails = filter.value;
+              break;
+            case "contactNo":
+              payload.contactNos = filter.value;
+              break;
+            case "userRole":
+              payload.roleNames = filter.value;
+              break;
+            case "userId":
+              payload.userIds = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
+        });
+
+        requestOptions = {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        };
+
+        url = `${urls.usersViewPath}/export-filtered`;
+      }
+
+      const response = await fetch(url, requestOptions);
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      return await response.blob();
+    } catch (error: any) {
+      console.error("Error exporting users:", error.message);
+      throw new Error(error.message || "Failed to export users");
+    }
+  },
+
+  // Import users
+  import: async (file: File): Promise<{ message: string; errors?: any[] }> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${urls.usersViewPath}/import`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        return {
+          message: result.message || "Users imported successfully",
+          errors: result.errors || [],
+        };
+      } else {
+        throw new Error(result.message || "Failed to import users");
+      }
+    } catch (error: any) {
+      console.error("Error importing users:", error.message);
+      throw new Error(error.message || "Failed to import users");
+    }
+  },
+
+  // Get filter summary for dashboard
+  getFilterSummary: async (): Promise<FilterSummaryResponse> => {
+    try {
+      const response: ApiResponse<FilterSummaryResponse> = await getRequest(
+        `${urls.usersViewPath}/filter-summary`
+      );
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter summary");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter summary:", error.message);
+      throw new Error(error.message || "Failed to fetch filter summary");
+    }
+  },
+
+  // Legacy search method for backwards compatibility
   search: async (
     searchText: string,
     page: number = 1,
     limit: number = 10
   ): Promise<PaginatedResponse<Row>> => {
-    try {
-      if (!searchText.trim()) {
-        return userServices.getAll(page, limit);
-      }
-
-      const response: ApiResponse<UsersListResponse> = await getRequest(
-        `${urls.usersViewPath}/search`,
-        {
-          search: searchText.trim(),
-          page,
-          limit,
-        }
-      );
-
-      if (response.success) {
-        return {
-          data: response.data.data.map(transformUserToRow),
-          total: response.data.pagination.total,
-          page: response.data.pagination.page,
-          limit: response.data.pagination.limit,
-          totalPages: response.data.pagination.totalPages,
-          hasNext: response.data.pagination.hasNext,
-          hasPrev: response.data.pagination.hasPrev,
-        };
-      } else {
-        throw new Error(response.message || "Search failed");
-      }
-    } catch (error: any) {
-      console.error("Error searching users:", error.message);
-      throw new Error(error.message || "Search failed");
-    }
+    // Use the new getAll method with search parameter
+    return userServices.getAll(page, limit, searchText);
   },
 
   // Get Roles for dropdown

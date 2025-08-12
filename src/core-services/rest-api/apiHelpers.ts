@@ -2,6 +2,7 @@
 import apiClient from "./api-client";
 import { FilterCondition } from '../../components/ui/DataTable/types';
 import urls from "../../global/constants/UrlConstants";
+import { store } from "../../store";
 
 // Server-side filter interface (matches your API)
 export interface ServerFilter {
@@ -18,6 +19,8 @@ export interface ListRequestPayload {
   filters?: ServerFilter[];
 }
 
+  console.log(store.getState.auth?.accessToken,"token");
+   console.log(store.getState.auth?.user.userName,"uwername");
 // Helper for GET requests
 export const getRequest = async (url: string, params = {}) => {
   try {

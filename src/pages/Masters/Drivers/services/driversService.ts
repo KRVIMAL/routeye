@@ -1,9 +1,10 @@
-// src/modules/drivers/services/driversService.ts - Updated with server-side filtering
+// driversService.ts - Fixed Implementation with Filter API Integration
 import { Row } from "../../../../components/ui/DataTable/types";
 import {
   getRequest,
   postRequest,
   patchRequest,
+  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 
@@ -33,13 +34,36 @@ interface DriverData {
 interface DriversListResponse {
   data: DriverData[];
   pagination: {
-    page: string;
-    limit: string;
+    page: string | number;
+    limit: string | number;
     total: number;
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
   };
+  filterCounts?: {
+    statuses?: Array<{ _id: string; count: number }>;
+    licenseTypes?: Array<{ _id: string; count: number }>;
+    experienceLevels?: Array<{ _id: string; count: number }>;
+    locations?: Array<{ _id: string; count: number }>;
+    names?: Array<{ _id: string; count: number }>;
+    contactNos?: Array<{ _id: string; count: number }>;
+    emails?: Array<{ _id: string; count: number }>;
+    licenseNos?: Array<{ _id: string; count: number }>;
+    adharNos?: Array<{ _id: string; count: number }>;
+    driverIds?: Array<{ _id: string; count: number }>;
+  };
+}
+
+interface FilterOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+interface FilterOptionsResponse {
+  options: FilterOption[];
+  total: number;
 }
 
 // Pagination response interface
@@ -53,19 +77,42 @@ interface PaginatedResponse<T> {
   hasPrev: boolean;
 }
 
-// Server-side filter interface (matches your API)
+// Filter interface
+interface Filter {
+  field: string;
+  value: any[];
+  label?: string;
+}
+
+interface FilterSummaryResponse {
+  totalDrivers: number;
+  statuses: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  licenseTypes?: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  experienceLevels?: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  locations?: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+}
+
+// Server-side filter interface (matches your current API)
 interface ServerFilter {
   field: string;
   operator: string;
   value: string;
-}
-
-// API request payload interface
-interface DriversRequestPayload {
-  page: number;
-  limit: number;
-  search?: string;
-  filters?: ServerFilter[];
 }
 
 // Transform API driver data to Row format
@@ -83,56 +130,133 @@ const transformDriverToRow = (driver: DriverData): Row => ({
   inactiveTime: driver.updatedAt,
 });
 
-// Transform client-side filters to server-side format
-const transformFiltersToServerFormat = (filters: any[]): ServerFilter[] => {
-  return filters.map((filter) => ({
-    field: filter.field || filter.column, // Support both field and column properties
-    operator: filter.operator,
-    value: filter.value,
-  }));
-};
-
 export const driverServices = {
+  // Updated getAll method - supports both new filter API and legacy filtering
   getAll: async (
     page: number = 1,
     limit: number = 10,
     searchText?: string,
-    filters?: any[]
+    sortField?: string,
+    sortDirection?: "asc" | "desc",
+    filters?: Filter[]
   ): Promise<PaginatedResponse<Row>> => {
     try {
-      const payload: DriversRequestPayload = {
-        page,
-        limit,
-      };
-
-      // Add search if provided
-      if (searchText && searchText.trim()) {
-        payload.search = searchText.trim();
-      }
-
-      // Add filters if provided
-      if (filters && filters.length > 0) {
-        payload.filters = transformFiltersToServerFormat(filters);
-      }
-
-      const response: ApiResponse<DriversListResponse> = await postRequest(
-        `${urls.driversViewPath}/listDriver`,
-        payload
-      );
-      console.log({ response });
-
-      if (response.success) {
-        return {
-          data: response.data.data.map(transformDriverToRow),
-          total: response.data.pagination.total,
-          page: parseInt(response.data.pagination.page),
-          limit: parseInt(response.data.pagination.limit),
-          totalPages: response.data.pagination.totalPages,
-          hasNext: response.data.pagination.hasNext,
-          hasPrev: response.data.pagination.hasPrev,
+      // Check if we have the new filter API endpoint
+      const hasFilterAPI = true; // You can make this configurable
+      
+      if (hasFilterAPI && (filters || sortField || sortDirection)) {
+        // Use new filter API
+        const payload: any = {
+          page,
+          limit,
         };
+
+        // Add search if provided
+        if (searchText && searchText.trim()) {
+          payload.searchText = searchText.trim();
+        }
+
+        // Add sorting if provided
+        if (sortField && sortDirection) {
+          payload.sortBy = sortField;
+          payload.sortOrder = sortDirection;
+        }
+
+        // Transform filters to the API format
+        if (filters && filters.length > 0) {
+          filters.forEach((filter) => {
+            switch (filter.field) {
+              case "status":
+                payload.statuses = filter.value;
+                break;
+              case "name":
+                payload.names = filter.value;
+                break;
+              case "contactNo":
+                payload.contactNos = filter.value;
+                break;
+              case "email":
+                payload.emails = filter.value;
+                break;
+              case "licenseNo":
+                payload.licenseNos = filter.value;
+                break;
+              case "adharNo":
+                payload.adharNos = filter.value;
+                break;
+              case "driverId":
+                payload.driverIds = filter.value;
+                break;
+              default:
+                payload[`${filter.field}s`] = filter.value;
+            }
+          });
+        }
+
+        const response: ApiResponse<DriversListResponse> = await postRequest(
+          `${urls.driversViewPath}/filter`,
+          payload
+        );
+
+        if (response.success) {
+          return {
+            data: response.data.data.map(transformDriverToRow),
+            total: response.data.pagination.total,
+            page:
+              typeof response.data.pagination.page === "string"
+                ? parseInt(response.data.pagination.page)
+                : response.data.pagination.page,
+            limit:
+              typeof response.data.pagination.limit === "string"
+                ? parseInt(response.data.pagination.limit)
+                : response.data.pagination.limit,
+            totalPages: response.data.pagination.totalPages,
+            hasNext: response.data.pagination.hasNext,
+            hasPrev: response.data.pagination.hasPrev,
+          };
+        } else {
+          throw new Error(response.message || "Failed to fetch drivers");
+        }
       } else {
-        throw new Error(response.message || "Failed to fetch drivers");
+        // Use legacy listDriver API for backwards compatibility
+        const payload: any = {
+          page,
+          limit,
+        };
+
+        // Add search if provided
+        if (searchText && searchText.trim()) {
+          payload.search = searchText.trim();
+        }
+
+        // Legacy filter format for old API
+        if (filters && filters.length > 0) {
+          const serverFilters: ServerFilter[] = filters.map((filter) => ({
+            field: filter.field,
+            operator: "in", // Default operator
+            value: Array.isArray(filter.value) ? filter.value.join(",") : filter.value,
+          }));
+          payload.filters = serverFilters;
+        }
+
+        const response: ApiResponse<DriversListResponse> = await postRequest(
+          `${urls.driversViewPath}/listDriver`,
+          payload
+        );
+
+        if (response.success) {
+          return {
+            data: response.data.data.map(transformDriverToRow),
+            total: response.data.pagination.total,
+            page: parseInt(response.data.pagination.page.toString()),
+            limit: parseInt(response.data.pagination.limit.toString()),
+            totalPages: response.data.pagination.totalPages,
+            hasNext: response.data.pagination.hasNext,
+            hasPrev: response.data.pagination.hasPrev,
+          };
+        } else {
+          throw new Error(response.message || "Failed to fetch drivers");
+        }
       }
     } catch (error: any) {
       console.error("Error fetching drivers:", error.message);
@@ -140,6 +264,61 @@ export const driverServices = {
     }
   },
 
+  // Get filter options for a specific column
+  getFilterOptions: async (
+    column: string,
+    searchText?: string,
+    limit: number = 10
+  ): Promise<FilterOption[]> => {
+    try {
+      const params: any = { column, limit };
+
+      if (searchText && searchText.trim()) {
+        params.search = searchText.trim();
+      }
+
+      const response: ApiResponse<FilterOptionsResponse> = await getRequest(
+        `${urls.driversViewPath}/filter-options`,
+        params
+      );
+
+      if (response.success) {
+        return response.data.options;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter options");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter options:", error.message);
+      throw new Error(error.message || "Failed to fetch filter options");
+    }
+  },
+
+  // Helper method to parse filter counts from filter API response
+  parseFilterCounts: (filterCounts: any, field: string): FilterOption[] => {
+    const fieldMapping: { [key: string]: string } = {
+      status: "statuses",
+      name: "names",
+      contactNo: "contactNos",
+      email: "emails",
+      licenseNo: "licenseNos",
+      adharNo: "adharNos",
+      driverId: "driverIds",
+      licenseType: "licenseTypes",
+      experienceLevel: "experienceLevels",
+      location: "locations",
+    };
+
+    const apiField = fieldMapping[field] || `${field}s`;
+    const counts = filterCounts[apiField] || [];
+
+    return counts.map((item: any) => ({
+      value: item._id.toString(),
+      label: item._id.toString(),
+      count: item.count,
+    }));
+  },
+
+  // Get driver by ID
   getById: async (id: string | number): Promise<Row | null> => {
     try {
       const response: ApiResponse<DriverData> = await getRequest(
@@ -153,7 +332,6 @@ export const driverServices = {
       }
     } catch (error: any) {
       console.error("Error fetching driver:", error.message);
-      // Return null if driver not found instead of throwing
       if (
         error.message.includes("not found") ||
         error.message.includes("404")
@@ -164,6 +342,7 @@ export const driverServices = {
     }
   },
 
+  // Create new driver
   create: async (
     driverData: Partial<Row>
   ): Promise<{ driver: Row; message: string }> => {
@@ -174,7 +353,7 @@ export const driverServices = {
         email: driverData.email,
         licenseNo: driverData.licenseNo,
         adharNo: driverData.adharNo,
-        status: driverData.status,
+        status: driverData.status || "active",
       };
 
       const response: ApiResponse<DriverData> = await postRequest(
@@ -196,6 +375,7 @@ export const driverServices = {
     }
   },
 
+  // Update driver
   update: async (
     id: string | number,
     driverData: Partial<Row>
@@ -214,7 +394,7 @@ export const driverServices = {
         payload.adharNo = driverData.adharNo;
       if (driverData.status !== undefined) payload.status = driverData.status;
 
-      const response: ApiResponse<DriverData> = await patchRequest(
+      const response: ApiResponse<DriverData> = await putRequest(
         `${urls.driversViewPath}/${id}`,
         payload
       );
@@ -233,9 +413,10 @@ export const driverServices = {
     }
   },
 
+  // Inactivate driver (soft delete)
   inactivate: async (id: string | number): Promise<{ message: string }> => {
     try {
-      const response: ApiResponse<DriverData> = await patchRequest(
+      const response: ApiResponse<any> = await patchRequest(
         `${urls.driversViewPath}/${id}`,
         {
           status: "inactive",
@@ -255,7 +436,123 @@ export const driverServices = {
     }
   },
 
-  // Deprecated: Use getAll with searchText parameter instead
+  // Export drivers - Updated to work with filters
+  export: async (filters?: Filter[]): Promise<Blob> => {
+    try {
+      let url = `${urls.driversViewPath}/export`;
+      let requestOptions: RequestInit = {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      };
+
+      // If filters exist, use POST method with filter data
+      if (filters && filters.length > 0) {
+        const payload: any = {};
+
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "name":
+              payload.names = filter.value;
+              break;
+            case "contactNo":
+              payload.contactNos = filter.value;
+              break;
+            case "email":
+              payload.emails = filter.value;
+              break;
+            case "licenseNo":
+              payload.licenseNos = filter.value;
+              break;
+            case "adharNo":
+              payload.adharNos = filter.value;
+              break;
+            case "driverId":
+              payload.driverIds = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
+        });
+
+        requestOptions = {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        };
+
+        url = `${urls.driversViewPath}/export-filtered`;
+      }
+
+      const response = await fetch(url, requestOptions);
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      return await response.blob();
+    } catch (error: any) {
+      console.error("Error exporting drivers:", error.message);
+      throw new Error(error.message || "Failed to export drivers");
+    }
+  },
+
+  // Import drivers
+  import: async (file: File): Promise<{ message: string; errors?: any[] }> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${urls.driversViewPath}/import`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        return {
+          message: result.message || "Drivers imported successfully",
+          errors: result.errors || [],
+        };
+      } else {
+        throw new Error(result.message || "Failed to import drivers");
+      }
+    } catch (error: any) {
+      console.error("Error importing drivers:", error.message);
+      throw new Error(error.message || "Failed to import drivers");
+    }
+  },
+
+  // Get filter summary for dashboard
+  getFilterSummary: async (): Promise<FilterSummaryResponse> => {
+    try {
+      const response: ApiResponse<FilterSummaryResponse> = await getRequest(
+        `${urls.driversViewPath}/filter-summary`
+      );
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter summary");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter summary:", error.message);
+      throw new Error(error.message || "Failed to fetch filter summary");
+    }
+  },
+
+  // Legacy methods for backwards compatibility
   search: async (
     searchText: string,
     page: number = 1,
@@ -264,13 +561,19 @@ export const driverServices = {
     return driverServices.getAll(page, limit, searchText);
   },
 
-  // New method specifically for filtering
   getWithFilters: async (
     page: number = 1,
     limit: number = 10,
     searchText?: string,
     filters?: any[]
   ): Promise<PaginatedResponse<Row>> => {
-    return driverServices.getAll(page, limit, searchText, filters);
+    // Transform legacy filter format to new format
+    const newFilters: Filter[] = filters?.map(f => ({
+      field: f.field || f.column,
+      value: Array.isArray(f.value) ? f.value : [f.value],
+      label: f.label
+    })) || [];
+
+    return driverServices.getAll(page, limit, searchText, undefined, undefined, newFilters);
   },
 };

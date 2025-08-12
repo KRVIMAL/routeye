@@ -76,6 +76,7 @@ export interface ColumnState {
   sortDirection?: "asc" | "desc" | null;
 }
 
+// src/components/ui/DataTable/types.ts - Add missing props to DataTableProps interface
 export interface DataTableProps {
   columns: Column[];
   rows: Row[];
@@ -117,6 +118,14 @@ export interface DataTableProps {
     filename: string;
     queryParams?: { [key: string]: string };
   };
+  
+  // Add these missing props
+  onAddClick?: () => void;
+  onImportClick?: () => void;
+  onTemplateClick?: () => void;
+  showAddButton?: boolean;
+  showImportButton?: boolean;
+  showTemplateButton?: boolean;
 }
 
 export interface TableToolbarProps {

@@ -1,4 +1,3 @@
-// src/modules/vehicles/pages/AddEditVehicleForm.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { FiHome, FiTruck, FiPlus } from "react-icons/fi";
@@ -11,6 +10,8 @@ import strings from "../../../../global/constants/StringConstants";
 import urls from "../../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
 import { tabTitle } from "../../../../utils/tab-title";
+import ProgressBar from "../../../../components/ui/ProgressBar";
+import Button from "../../../../components/ui/Button";
 
 // Form state type
 interface VehicleFormState {
@@ -96,6 +97,61 @@ const AddEditVehicleForm: React.FC = () => {
     },
   ];
 
+  // Update this function to count only required fields
+  const calculateProgress = () => {
+    // Define which fields are required
+    const requiredFields = [
+      "brandName",
+      "modelName",
+      "vehicleType",
+      "icon",
+      "status",
+    ] as (keyof VehicleFormState)[];
+
+    const filledRequiredFields = requiredFields.filter((fieldName) => {
+      const field = formData[fieldName];
+      const value = field.value;
+      return (
+        value !== null && value !== undefined && String(value).trim() !== ""
+      );
+    }).length;
+
+    const totalRequiredFields = requiredFields.length;
+    const progress =
+      totalRequiredFields > 0
+        ? Math.round((filledRequiredFields / totalRequiredFields) * 100)
+        : 0;
+
+    // Debug log to check calculation
+    console.log("Progress calculation (required fields only):", {
+      filledRequiredFields,
+      totalRequiredFields,
+      progress,
+      requiredFieldValues: requiredFields.map((field) => ({
+        field,
+        value: formData[field].value,
+        filled: String(formData[field].value).trim() !== "",
+      })),
+    });
+
+    return progress;
+  };
+
+  const getProgressMessage = () => {
+    const progress = calculateProgress();
+    if (progress === 0) return "You are about to add a new vehicle.";
+    if (progress < 50)
+      return "Please continue filling the required fields to proceed.";
+    if (progress < 100)
+      return "Almost done! Complete the remaining required fields.";
+    return "All required fields completed! You can now save the vehicle.";
+  };
+
+  // Add this helper function to check if form is complete
+  const isFormComplete = () => {
+    return calculateProgress() === 100;
+  };
+
   useEffect(() => {
     if (isEdit && id) {
       // Get data from navigation state first, fallback to API
@@ -133,8 +189,8 @@ const AddEditVehicleForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: e.target.value,
-          error: "", // Clear error when user types
+          value: e.target.value, // This will be empty string when cleared
+          error: "",
         },
       }));
     };
@@ -144,7 +200,7 @@ const AddEditVehicleForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: value as string,
+          value: value === null ? "" : (value as string), // Convert null to empty string
           error: "",
         },
       }));
@@ -282,131 +338,193 @@ const AddEditVehicleForm: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-secondary">
+    <div className="min-h-screen bg-theme-secondary rounded-t-[24px] overflow-hidden flex flex-col">
       <ModuleHeader
         title={isEdit ? strings.EDIT_VEHICLE : strings.ADD_VEHICLE}
         breadcrumbs={breadcrumbs}
-        showCancelButton
-        showSaveButton
-        onSaveClick={handleSave}
-        onCancelClick={handleCancel}
-        saveText={saving ? "Saving..." : "Save"}
+        className="rounded-t-[24px]"
+        titleClassName="module-title-custom" // Add this prop
       />
+      {/* Main content area */}
+      <div className="flex-1">
+        <div className="p-6">
+          <Card className="p-6 !rounded-[24px]">
+            <Card.Body className="p-6">
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <CustomInput
+                    label="Brand Name"
+                    value={formData.brandName.value}
+                    onChange={handleInputChange("brandName")}
+                    onBlur={handleBlur("brandName")}
+                    required
+                    placeholder="Enter brand name (e.g., Toyota, Honda)"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.brandName.error}
+                  />
+                </div>
 
-      <div className="p-6">
-        <Card>
-          <Card.Body className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <CustomInput
-                  label="Brand Name"
-                  value={formData.brandName.value}
-                  onChange={handleInputChange("brandName")}
-                  onBlur={handleBlur("brandName")}
-                  required
-                  placeholder="Enter brand name (e.g., Toyota, Honda)"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.brandName.error}
-                />
-              </div>
+                <div>
+                  <CustomInput
+                    label="Model Name"
+                    value={formData.modelName.value}
+                    onChange={handleInputChange("modelName")}
+                    onBlur={handleBlur("modelName")}
+                    required
+                    placeholder="Enter model name (e.g., Camry, Civic)"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.modelName.error}
+                  />
+                </div>
 
-              <div>
-                <CustomInput
-                  label="Model Name"
-                  value={formData.modelName.value}
-                  onChange={handleInputChange("modelName")}
-                  onBlur={handleBlur("modelName")}
-                  required
-                  placeholder="Enter model name (e.g., Camry, Civic)"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.modelName.error}
-                />
-              </div>
+                <div>
+                  <Select
+                    label="Vehicle Type"
+                    options={vehicleTypeOptions}
+                    value={formData.vehicleType.value}
+                    onChange={handleSelectChange("vehicleType")}
+                    placeholder="Select Vehicle Type"
+                    required
+                    disabled={saving}
+                    error={formData.vehicleType.error}
+                  />
+                </div>
 
-              <div>
-                <Select
-                  label="Vehicle Type"
-                  options={vehicleTypeOptions}
-                  value={formData.vehicleType.value}
-                  onChange={handleSelectChange("vehicleType")}
-                  placeholder="Select Vehicle Type"
-                  required
-                  disabled={saving}
-                  error={formData.vehicleType.error}
-                />
-              </div>
+                <div>
+                  <CustomInput
+                    label="Icon"
+                    value={formData.icon.value}
+                    onChange={handleInputChange("icon")}
+                    onBlur={handleBlur("icon")}
+                    required
+                    placeholder="Enter icon URL or filename"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.icon.error}
+                    helperText="Enter the URL or filename for the vehicle icon"
+                  />
+                </div>
 
-              <div>
-                <CustomInput
-                  label="Icon"
-                  value={formData.icon.value}
-                  onChange={handleInputChange("icon")}
-                  onBlur={handleBlur("icon")}
-                  required
-                  placeholder="Enter icon URL or filename"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.icon.error}
-                  helperText="Enter the URL or filename for the vehicle icon"
-                />
-              </div>
+                <div>
+                  <Select
+                    label="Status"
+                    options={statusOptions}
+                    value={formData.status.value}
+                    onChange={handleSelectChange("status")}
+                    placeholder="Select Status"
+                    required
+                    disabled={saving}
+                    error={formData.status.error}
+                  />
+                </div>
 
-              <div>
-                <Select
-                  label="Status"
-                  options={statusOptions}
-                  value={formData.status.value}
-                  onChange={handleSelectChange("status")}
-                  placeholder="Select Status"
-                  required
-                  disabled={saving}
-                  error={formData.status.error}
-                />
-              </div>
-
-              {/* Icon Preview */}
-              {formData.icon.value && (
-                <div className="md:col-span-2">
-                  <label className="block text-body-small font-medium text-text-primary mb-2">
-                    Icon Preview
-                  </label>
-                  <div className="flex items-center space-x-4 p-4 border border-border-light rounded-lg bg-theme-tertiary">
-                    <div className="w-16 h-16 flex items-center justify-center border border-border-medium rounded-lg bg-theme-primary">
-                      <img
-                        src={formData.icon.value}
-                        alt="Vehicle Icon Preview"
-                        className="w-12 h-12 object-contain"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = "none";
-                        }}
-                        onLoad={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = "block";
-                        }}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-text-primary font-medium">
-                        {formData.brandName.value} {formData.modelName.value}
-                      </p>
-                      <p className="text-xs text-text-muted">
-                        {formData.vehicleType.value &&
-                          `Type: ${
-                            formData.vehicleType.value.charAt(0).toUpperCase() +
-                            formData.vehicleType.value.slice(1)
-                          }`}
-                      </p>
+                {/* Icon Preview */}
+                {formData.icon.value && (
+                  <div className="md:col-span-2">
+                    <label className="block text-body-small font-medium text-text-primary mb-2">
+                      Icon Preview
+                    </label>
+                    <div className="flex items-center space-x-4 p-4 border border-border-light rounded-lg bg-theme-tertiary">
+                      <div className="w-16 h-16 flex items-center justify-center border border-border-medium rounded-lg bg-theme-primary">
+                        <img
+                          src={formData.icon.value}
+                          alt="Vehicle Icon Preview"
+                          className="w-12 h-12 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                          }}
+                          onLoad={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "block";
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-text-primary font-medium">
+                          {formData.brandName.value} {formData.modelName.value}
+                        </p>
+                        <p className="text-xs text-text-muted">
+                          {formData.vehicleType.value &&
+                            `Type: ${
+                              formData.vehicleType.value.charAt(0).toUpperCase() +
+                              formData.vehicleType.value.slice(1)
+                            }`}
+                        </p>
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* Progress Bar Section - Inside Card */}
+              <div className="mt-16">
+                <ProgressBar value={calculateProgress()} animated={true} />
+
+                {/* Message and Buttons on same line - Inside Card */}
+                <div className="flex items-center justify-between mt-4">
+                  {/* Progress Message */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#1F3A8A] flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    </div>
+                    <p className="text-sm text-[#1F3A8A] font-medium">
+                      {getProgressMessage()}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons - Update the Save button */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#F3F4F6",
+                        text: "#374151",
+                        border: "#E5E7EB",
+                        hover: { background: "#F1F1F1" },
+                      }}
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="btn-custom-hover border"
+                      size="lg"
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#1F3A8A",
+                        text: "#FFFFFF",
+                        hover: { background: "#1D40B0" },
+                      }}
+                      onClick={handleSave}
+                      loading={saving}
+                      disabled={saving || !isFormComplete()} // Disable if saving OR form incomplete
+                      className="btn-custom-hover"
+                      size="lg"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </div>
-          </Card.Body>
-        </Card>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#1F3A8A] text-white py-4">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center text-sm">
+            Routeye software - All rights reserved - © 2025
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

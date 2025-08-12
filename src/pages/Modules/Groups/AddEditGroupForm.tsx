@@ -10,6 +10,8 @@ import strings from "../../../global/constants/StringConstants";
 import urls from "../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
 import { tabTitle } from "../../../utils/tab-title";
+import ProgressBar from "../../../components/ui/ProgressBar";
+import Button from "../../../components/ui/Button";
 
 // Form state type
 interface GroupFormState {
@@ -124,6 +126,61 @@ const AddEditGroupForm: React.FC = () => {
     },
   ];
 
+  // Update this function to count only required fields
+  const calculateProgress = () => {
+    // Define which fields are required (remark is optional in groups typically)
+    const requiredFields = [
+      "groupType",
+      "stateName",
+      "cityName",
+      "contactNo",
+      "status",
+    ] as (keyof GroupFormState)[];
+
+    const filledRequiredFields = requiredFields.filter((fieldName) => {
+      const field = formData[fieldName];
+      const value = field.value;
+      return (
+        value !== null && value !== undefined && String(value).trim() !== ""
+      );
+    }).length;
+
+    const totalRequiredFields = requiredFields.length;
+    const progress =
+      totalRequiredFields > 0
+        ? Math.round((filledRequiredFields / totalRequiredFields) * 100)
+        : 0;
+
+    // Debug log to check calculation
+    console.log("Progress calculation (required fields only):", {
+      filledRequiredFields,
+      totalRequiredFields,
+      progress,
+      requiredFieldValues: requiredFields.map((field) => ({
+        field,
+        value: formData[field].value,
+        filled: String(formData[field].value).trim() !== "",
+      })),
+    });
+
+    return progress;
+  };
+
+  const getProgressMessage = () => {
+    const progress = calculateProgress();
+    if (progress === 0) return "You are about to add a new group.";
+    if (progress < 50)
+      return "Please continue filling the required fields to proceed.";
+    if (progress < 100)
+      return "Almost done! Complete the remaining required fields.";
+    return "All required fields completed! You can now save the group.";
+  };
+
+  // Add this helper function to check if form is complete
+  const isFormComplete = () => {
+    return calculateProgress() === 100;
+  };
+
   useEffect(() => {
     if (isEdit && id) {
       const { state } = location;
@@ -161,7 +218,7 @@ const AddEditGroupForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: e.target.value,
+          value: e.target.value, // This will be empty string when cleared
           error: "",
         },
       }));
@@ -172,7 +229,7 @@ const AddEditGroupForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: value as string,
+          value: value === null ? "" : (value as string), // Convert null to empty string
           error: "",
         },
       }));
@@ -191,9 +248,6 @@ const AddEditGroupForm: React.FC = () => {
         break;
       case "cityName":
         if (!value.trim()) error = "City Name is required";
-        break;
-      case "remark":
-        if (!value.trim()) error = "Remark is required";
         break;
       case "contactNo":
         if (!value.trim()) {
@@ -244,12 +298,6 @@ const AddEditGroupForm: React.FC = () => {
         ...formData.cityName,
         error: "City Name is required",
       };
-      isValid = false;
-    }
-
-    // Remark validation
-    if (!formData.remark.value.trim()) {
-      errors.remark = { ...formData.remark, error: "Remark is required" };
       isValid = false;
     }
 
@@ -307,7 +355,7 @@ const AddEditGroupForm: React.FC = () => {
 
       setTimeout(() => {
         navigate(urls.groupsViewPath);
-      }, 1500);
+      }, 1300);
     } catch (error: any) {
       console.error("Error saving group:", error);
       toast.error(error.message || "Failed to save group");
@@ -329,109 +377,169 @@ const AddEditGroupForm: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-secondary">
+    <div className="min-h-screen bg-theme-secondary rounded-t-[24px] overflow-hidden flex flex-col">
       <ModuleHeader
         title={isEdit ? strings.EDIT_GROUP : strings.ADD_GROUP}
         breadcrumbs={breadcrumbs}
-        showCancelButton
-        showSaveButton
-        onSaveClick={handleSave}
-        onCancelClick={handleCancel}
-        saveText={saving ? "Saving..." : "Save"}
+        className="rounded-t-[24px]"
+        titleClassName="module-title-custom" // Add this prop
       />
-
-      <div className="p-6">
-        <Card>
-          <Card.Body className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <CustomInput
-                  label={strings.GROUP_TYPE}
-                  value={formData.groupType.value}
-                  onChange={handleInputChange("groupType")}
-                  onBlur={handleBlur("groupType")}
-                  required
-                  placeholder="Enter group type (e.g., Manipur Police)"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.groupType.error}
-                />
-              </div>
-
-              <div>
-                <Select
-                  label={strings.STATE_NAME}
-                  options={stateOptions}
-                  value={formData.stateName.value}
-                  onChange={handleSelectChange("stateName")}
-                  placeholder="Select State"
-                  required
-                  disabled={saving}
-                  error={formData.stateName.error}
-                />
-              </div>
-
-              <div>
-                <CustomInput
-                  label={strings.CITY_NAME}
-                  value={formData.cityName.value}
-                  onChange={handleInputChange("cityName")}
-                  onBlur={handleBlur("cityName")}
-                  required
-                  placeholder="Enter city name"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.cityName.error}
-                />
-              </div>
-
-              <div>
-                <CustomInput
-                  label={strings.CONTACT_NO}
-                  value={formData.contactNo.value}
-                  onChange={handleInputChange("contactNo")}
-                  maxLength={10}
-                  onBlur={handleBlur("contactNo")}
-                  required
-                  placeholder="Enter contact number"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.contactNo.error}
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <CustomInput
-                  label={strings.REMARK}
-                  value={formData.remark.value}
-                  onChange={handleInputChange("remark")}
-                  onBlur={handleBlur("remark")}
-                  required
-                  placeholder="Enter remark"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.remark.error}
-                />
-              </div>
-
-              {isEdit && (
+      {/* Main content area */}
+      <div className="flex-1">
+        <div className="p-6">
+          <Card className="p-6 !rounded-[24px]">
+            <Card.Body className="p-6">
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Select
-                    label="Status"
-                    options={statusOptions}
-                    value={formData.status.value}
-                    onChange={handleSelectChange("status")}
-                    placeholder="Select Status"
+                  <CustomInput
+                    label={strings.GROUP_TYPE}
+                    value={formData.groupType.value}
+                    onChange={handleInputChange("groupType")}
+                    onBlur={handleBlur("groupType")}
                     required
+                    placeholder="Enter group type (e.g., Manipur Police)"
                     disabled={saving}
-                    error={formData.status.error}
+                    autoValidate={false}
+                    error={formData.groupType.error}
                   />
                 </div>
-              )}
-            </div>
-          </Card.Body>
-        </Card>
+
+                <div>
+                  <Select
+                    label={strings.STATE_NAME}
+                    options={stateOptions}
+                    value={formData.stateName.value}
+                    onChange={handleSelectChange("stateName")}
+                    placeholder="Select State"
+                    required
+                    disabled={saving}
+                    error={formData.stateName.error}
+                  />
+                </div>
+
+                <div>
+                  <CustomInput
+                    label={strings.CITY_NAME}
+                    value={formData.cityName.value}
+                    onChange={handleInputChange("cityName")}
+                    onBlur={handleBlur("cityName")}
+                    required
+                    placeholder="Enter city name"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.cityName.error}
+                  />
+                </div>
+
+                <div>
+                  <CustomInput
+                    label={strings.CONTACT_NO}
+                    value={formData.contactNo.value}
+                    onChange={handleInputChange("contactNo")}
+                    maxLength={10}
+                    onBlur={handleBlur("contactNo")}
+                    required
+                    placeholder="Enter contact number"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.contactNo.error}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <CustomInput
+                    label={strings.REMARK}
+                    value={formData.remark.value}
+                    onChange={handleInputChange("remark")}
+                    placeholder="Enter remark (optional)"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.remark.error}
+                  />
+                </div>
+
+                {isEdit && (
+                  <div>
+                    <Select
+                      label="Status"
+                      options={statusOptions}
+                      value={formData.status.value}
+                      onChange={handleSelectChange("status")}
+                      placeholder="Select Status"
+                      required
+                      disabled={saving}
+                      error={formData.status.error}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Progress Bar Section - Inside Card */}
+              <div className="mt-16">
+                <ProgressBar value={calculateProgress()} animated={true} />
+
+                {/* Message and Buttons on same line - Inside Card */}
+                <div className="flex items-center justify-between mt-4">
+                  {/* Progress Message */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#1F3A8A] flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    </div>
+                    <p className="text-sm text-[#1F3A8A] font-medium">
+                      {getProgressMessage()}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#F3F4F6",
+                        text: "#374151",
+                        border: "#E5E7EB",
+                        hover: { background: "#F1F1F1" },
+                      }}
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="btn-custom-hover border"
+                      size="lg"
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#1F3A8A",
+                        text: "#FFFFFF",
+                        hover: { background: "#1D40B0" },
+                      }}
+                      onClick={handleSave}
+                      loading={saving}
+                      disabled={saving || !isFormComplete()} // Disable if saving OR form incomplete
+                      className="btn-custom-hover"
+                      size="lg"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#1F3A8A] text-white py-4">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center text-sm">
+            Routeye software - All rights reserved - © 2025
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

@@ -28,6 +28,7 @@ import {
 import { useMonitoring } from "../../../hooks/useMonitoring";
 import { useGoogleMaps } from "../../../hooks/useGoogleMaps";
 import { store } from "../../../store";
+import { CloudCog } from "lucide-react";
 
 interface StatCard {
   name: string;
@@ -56,6 +57,7 @@ interface Device {
 
 const Dashboard: React.FC = () => {
   const accountId = store.getState()?.auth?.user?.account?._id;
+  console.log(store,"store")
   const clientId = "fmb920";
 
   // Map related state
@@ -294,7 +296,7 @@ const Dashboard: React.FC = () => {
       }, 300);
     }
   }, [map, isLoaded, google]);
-
+console.log(store.getState().auth,"state")
   const generateStatCards = (): StatCard[] => {
     const summaryData = getSafeSummaryData(monitoringData);
     const performanceData = getSafePerformanceData(monitoringData);

@@ -11,6 +11,8 @@ import urls from "../../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
 import { store } from "../../../../store";
 import { tabTitle } from "../../../../utils/tab-title";
+import ProgressBar from "../../../../components/ui/ProgressBar";
+import Button from "../../../../components/ui/Button";
 
 // Form state type
 interface AccountFormState {
@@ -68,7 +70,6 @@ const AddEditAccountForm: React.FC = () => {
   // Dropdown data
   const [clients, setClients] = useState<Client[]>([]);
   const [parentAccountName, setParentAccountName] = useState<string>("");
-  const [parentAccountId, setParentAccountId] = useState<string>("");
   const [loadingDropdowns, setLoadingDropdowns] = useState(false);
 
   const statusOptions = [
@@ -85,6 +86,59 @@ const AddEditAccountForm: React.FC = () => {
       icon: FiPlus,
     },
   ];
+
+  // Update this function to count only required fields
+  const calculateProgress = () => {
+    // Define which fields are required
+    const requiredFields = [
+      "accountName",
+      "clientId",
+      "status",
+    ] as (keyof AccountFormState)[];
+
+    const filledRequiredFields = requiredFields.filter((fieldName) => {
+      const field = formData[fieldName];
+      const value = field.value;
+      return (
+        value !== null && value !== undefined && String(value).trim() !== ""
+      );
+    }).length;
+
+    const totalRequiredFields = requiredFields.length;
+    const progress =
+      totalRequiredFields > 0
+        ? Math.round((filledRequiredFields / totalRequiredFields) * 100)
+        : 0;
+
+    // Debug log to check calculation
+    console.log("Progress calculation (required fields only):", {
+      filledRequiredFields,
+      totalRequiredFields,
+      progress,
+      requiredFieldValues: requiredFields.map((field) => ({
+        field,
+        value: formData[field].value,
+        filled: String(formData[field].value).trim() !== "",
+      })),
+    });
+
+    return progress;
+  };
+
+  const getProgressMessage = () => {
+    const progress = calculateProgress();
+    if (progress === 0) return "You are about to add a new account.";
+    if (progress < 50)
+      return "Please continue filling the required fields to proceed.";
+    if (progress < 100)
+      return "Almost done! Complete the remaining required fields.";
+    return "All required fields completed! You can now save the account.";
+  };
+
+  // Add this helper function to check if form is complete
+  const isFormComplete = () => {
+    return calculateProgress() === 100;
+  };
 
   useEffect(() => {
     const initializeForm = async () => {
@@ -114,14 +168,14 @@ const AddEditAccountForm: React.FC = () => {
 
       setClients(clientsData);
 
-      // Set parent account info if available
-      if (hierarchyData.parentAccount) {
-        setParentAccountName(hierarchyData.parentAccount.accountName);
-        // setParentAccountId(hierarchyData.parentAccount._id);
+      // Set parent account info from current user account
+      const currentAccount = store.getState()?.auth?.user?.account;
+      if (currentAccount) {
+        setParentAccountName(currentAccount.accountName);
         setFormData((prev) => ({
           ...prev,
           parentAccount: {
-            value: hierarchyData.parentAccount!._id,
+            value: currentAccount._id,
             error: "",
           },
         }));
@@ -129,7 +183,7 @@ const AddEditAccountForm: React.FC = () => {
 
       console.log("Dropdown data loaded:", {
         clients: clientsData.length,
-        parentAccount: hierarchyData.parentAccount?.accountName,
+        parentAccount: currentAccount?.accountName,
       });
     } catch (error: any) {
       console.error("Error loading dropdown data:", error);
@@ -164,7 +218,7 @@ const AddEditAccountForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: e.target.value,
+          value: e.target.value, // This will be empty string when cleared
           error: "",
         },
       }));
@@ -175,7 +229,7 @@ const AddEditAccountForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: value as string,
+          value: value === null ? "" : (value as string), // Convert null to empty string
           error: "",
         },
       }));
@@ -258,6 +312,7 @@ const AddEditAccountForm: React.FC = () => {
         : await accountServices.create(accountData);
       toast.success(result.message);
 
+      // Navigate back after a short delay to show the success message
       setTimeout(() => {
         navigate(urls.accountsViewPath);
       }, 1300);
@@ -288,108 +343,170 @@ const AddEditAccountForm: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-secondary">
+    <div className="min-h-screen bg-theme-secondary rounded-t-[24px] overflow-hidden flex flex-col">
       <ModuleHeader
         title={isEdit ? strings.EDIT_ACCOUNT : strings.ADD_ACCOUNT}
         breadcrumbs={breadcrumbs}
-        showCancelButton
-        showSaveButton
-        onSaveClick={handleSave}
-        onCancelClick={handleCancel}
-        saveText={saving ? "Saving..." : "Save"}
+        className="rounded-t-[24px]"
+        titleClassName="module-title-custom" // Add this prop
       />
-
-      <div className="p-6">
-        <Card>
-          <Card.Body className="p-6">
-            {loadingDropdowns && (
-              <div className="flex items-center justify-center py-4 mb-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-                <span className="ml-2 text-gray-600">Loading form data...</span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Parent Account - Read Only */}
-              <div>
-                <CustomInput
-                  label={strings.PARENT_ACCOUNT}
-                  value={store.getState()?.auth?.user?.account?.accountName}
-                  onChange={() => {}} // Read only
-                  required={false}
-                  placeholder="Parent account will be auto-selected"
-                  disabled={true}
-                  autoValidate={false}
-                  error=""
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Parent account is automatically determined
-                </p>
-              </div>
-
-              <div>
-                <CustomInput
-                  label={strings.ACCOUNT_NAME}
-                  value={formData.accountName.value}
-                  onChange={handleInputChange("accountName")}
-                  onBlur={handleBlur("accountName")}
-                  required
-                  placeholder="Enter account name"
-                  disabled={saving || loadingDropdowns}
-                  autoValidate={false}
-                  error={formData.accountName.error}
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Select
-                  label={strings.CLIENT_SELECTION}
-                  options={clientOptions}
-                  value={formData.clientId.value}
-                  onChange={handleSelectChange("clientId")}
-                  placeholder="Select Client (ID - Name)"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.clientId.error}
-                />
-              </div>
-
-              {isEdit && (
-                <div>
-                  <Select
-                    label="Status"
-                    options={statusOptions}
-                    value={formData.status.value}
-                    onChange={handleSelectChange("status")}
-                    placeholder="Select Status"
-                    required
-                    disabled={saving || loadingDropdowns}
-                    error={formData.status.error}
-                  />
+      {/* Main content area */}
+      <div className="flex-1">
+        <div className="p-6">
+          <Card className="p-6 !rounded-[24px]">
+            <Card.Body className="p-6">
+              {loadingDropdowns && (
+                <div className="flex items-center justify-center py-4 mb-6">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                  <span className="ml-2 text-gray-600">Loading form data...</span>
                 </div>
               )}
-            </div>
 
-            {/* Information Section */}
-            <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-                Account Information
-              </h4>
-              <div className="text-xs text-blue-600 dark:text-blue-300 space-y-1">
-                <p>
-                  • Parent Account: Automatically determined from account
-                  hierarchy
-                </p>
-                <p>• Client: Select the client associated with this account</p>
-                <p>
-                  • Account will be created under the current account's
-                  hierarchy
-                </p>
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Parent Account - Read Only */}
+                <div>
+                  <CustomInput
+                    label={strings.PARENT_ACCOUNT}
+                    value={store.getState()?.auth?.user?.account?.accountName}
+                    onChange={() => {}} // Read only
+                    required={false}
+                    placeholder="Parent account will be auto-selected"
+                    disabled={true}
+                    autoValidate={false}
+                    error=""
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Parent account is automatically determined
+                  </p>
+                </div>
+
+                <div>
+                  <CustomInput
+                    label={strings.ACCOUNT_NAME}
+                    value={formData.accountName.value}
+                    onChange={handleInputChange("accountName")}
+                    onBlur={handleBlur("accountName")}
+                    required
+                    placeholder="Enter account name"
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.accountName.error}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Select
+                    label={strings.CLIENT_SELECTION}
+                    options={clientOptions}
+                    value={formData.clientId.value}
+                    onChange={handleSelectChange("clientId")}
+                    placeholder="Select Client (ID - Name)"
+                    required
+                    disabled={saving || loadingDropdowns}
+                    error={formData.clientId.error}
+                  />
+                </div>
+
+                {isEdit && (
+                  <div>
+                    <Select
+                      label="Status"
+                      options={statusOptions}
+                      value={formData.status.value}
+                      onChange={handleSelectChange("status")}
+                      placeholder="Select Status"
+                      required
+                      disabled={saving || loadingDropdowns}
+                      error={formData.status.error}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-          </Card.Body>
-        </Card>
+
+              {/* Information Section */}
+              <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                  Account Information
+                </h4>
+                <div className="text-xs text-blue-600 dark:text-blue-300 space-y-1">
+                  <p>
+                    • Parent Account: Automatically determined from account
+                    hierarchy
+                  </p>
+                  <p>• Client: Select the client associated with this account</p>
+                  <p>
+                    • Account will be created under the current account's
+                    hierarchy
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Bar Section - Inside Card */}
+              <div className="mt-16">
+                <ProgressBar value={calculateProgress()} animated={true} />
+
+                {/* Message and Buttons on same line - Inside Card */}
+                <div className="flex items-center justify-between mt-4">
+                  {/* Progress Message */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#1F3A8A] flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    </div>
+                    <p className="text-sm text-[#1F3A8A] font-medium">
+                      {getProgressMessage()}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons - Update the Save button */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#F3F4F6",
+                        text: "#374151",
+                        border: "#E5E7EB",
+                        hover: { background: "#F1F1F1" },
+                      }}
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="btn-custom-hover border"
+                      size="lg"
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#1F3A8A",
+                        text: "#FFFFFF",
+                        hover: { background: "#1D40B0" },
+                      }}
+                      onClick={handleSave}
+                      loading={saving}
+                      disabled={saving || !isFormComplete()} // Disable if saving OR form incomplete
+                      className="btn-custom-hover"
+                      size="lg"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#1F3A8A] text-white py-4">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center text-sm">
+            Routeye software - All rights reserved - © 2025
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

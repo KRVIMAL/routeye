@@ -361,6 +361,74 @@ export class StringConstants {
   // Terms
   TERMS_MESSAGE = "By pressing continue you agree to our terms and conditions.";
   RETURN_TO_LOGIN_LINK = "Return to login";
+
+
+  
+  // Modules
+  MONITORING = "MONITORING";
+  DASHBOARD = "DASHBOARD";
+  // DEVICES = "DEVICES";
+  // VEHICLES = "VEHICLES";
+  // CLIENTS = "CLIENTS";
+  GEOFENCES_AND_ROUTES = "GEOFENCES AND ROUTES";
+  TRACKPLAY = "TRACKPLAY";
+  // DEVICE_ONBOARDING = "DEVICE ONBOARDING";
+  // ALERTS = "ALERTS";
+  REPORT = "REPORT";
+  
+  // Navigation
+  // HOME = "Home";
+  SETTINGS = "Settings";
+  PROFILE = "Profile";
+  LOGOUT = "Logout";
+  
+  // Theme
+  DARK_MODE = "DARK MODE";
+  DAY_MODE = "DAY MODE";
+  LIGHT_MODE = "LIGHT MODE";
+  
+  // Status
+  ONLINE = "Online";
+  OFFLINE = "Offline";
+  MOTION = "Motion";
+  HALT = "Halt";
+  IDLE = "Idle";
+  ALL_DEVICE = "All Device";
+  
+  // Time
+  MINUTES = "minutes";
+  SECONDS = "seconds";
+  
+  // Common
+  LOADING = "Loading...";
+  // ERROR = "Error";
+  // SUCCESS = "Success";
+  WARNING = "Warning";
+  INFO = "Info";
+  // CANCEL = "Cancel";
+  // SAVE = "Save";
+  // DELETE = "Delete";
+  // EDIT = "Edit";
+  // ADD = "Add";
+  VIEW = "View";
+  // EXPORT = "Export";
+  IMPORT = "Import";
+  // SEARCH = "Search";
+  FILTER = "Filter";
+  REFRESH = "Refresh";
+  
+  // Language
+  // ENGLISH = "English";
+  // SELECT_LANGUAGE = "Select Language";
+  
+  // Download App
+  // DOWNLOAD_APP = "Download app";
+  GET_IT_ON_GOOGLE_PLAY = "Get it on Google Play";
+  DOWNLOAD_ON_APP_STORE = "Download on the App Store";
+  
+  // Legal
+  // TERMS_CONDITIONS = "Terms & Conditions";
+  // PRIVACY_POLICY = "Privacy Policy";
 }
 
 let strings = new StringConstants();

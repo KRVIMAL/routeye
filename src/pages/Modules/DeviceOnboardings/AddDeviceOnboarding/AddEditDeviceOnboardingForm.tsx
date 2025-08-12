@@ -18,6 +18,8 @@ import strings from "../../../../global/constants/StringConstants";
 import urls from "../../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
 import { tabTitle } from "../../../../utils/tab-title";
+import ProgressBar from "../../../../components/ui/ProgressBar";
+import Button from "../../../../components/ui/Button";
 
 // Form state type
 interface DeviceOnboardingFormState {
@@ -30,22 +32,6 @@ interface DeviceOnboardingFormState {
     error: string;
   };
   deviceSerialNo: {
-    value: string;
-    error: string;
-  };
-  simNo1: {
-    value: string;
-    error: string;
-  };
-  simNo2: {
-    value: string;
-    error: string;
-  };
-  simNo1Operator: {
-    value: string;
-    error: string;
-  };
-  simNo2Operator: {
     value: string;
     error: string;
   };
@@ -69,7 +55,6 @@ interface DeviceOnboardingFormState {
     value: string;
     error: string;
   };
-
   mobileNo1: {
     value: string;
     error: string;
@@ -96,22 +81,6 @@ const initialFormState = (preState?: any): DeviceOnboardingFormState => ({
   },
   deviceSerialNo: {
     value: preState?.deviceSerialNo || "",
-    error: "",
-  },
-  simNo1: {
-    value: preState?.simNo1 || "",
-    error: "",
-  },
-  simNo2: {
-    value: preState?.simNo2 || "",
-    error: "",
-  },
-  simNo1Operator: {
-    value: preState?.simNo1Operator || "",
-    error: "",
-  },
-  simNo2Operator: {
-    value: preState?.simNo2Operator || "",
     error: "",
   },
   vehicleDescription: {
@@ -179,14 +148,6 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
     { value: "inactive", label: "Inactive" },
   ];
 
-  const simOperatorOptions = [
-    { value: "Airtel", label: "Airtel" },
-    { value: "Vodafone", label: "Vodafone" },
-    { value: "Jio", label: "Jio" },
-    { value: "BSNL", label: "BSNL" },
-    { value: "VI", label: "VI (Vodafone Idea)" },
-  ];
-
   const breadcrumbs = [
     { label: strings.HOME, href: urls.landingViewPath, icon: FiHome },
     {
@@ -202,6 +163,67 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
       icon: FiPlus,
     },
   ];
+
+  // Update this function to count only required fields
+  const calculateProgress = () => {
+    // Define which fields are required
+    const requiredFields = [
+      "account",
+      "deviceIMEI",
+      "deviceSerialNo",
+      "vehicleDescription",
+      "vehicleModule",
+      "vehicleMaster",
+      "driverModule",
+      "deviceModule",
+      "mobileNo1",
+      "mobileNo2",
+      "status",
+    ] as (keyof DeviceOnboardingFormState)[];
+
+    const filledRequiredFields = requiredFields.filter((fieldName) => {
+      const field = formData[fieldName];
+      const value = field.value;
+      return (
+        value !== null && value !== undefined && String(value).trim() !== ""
+      );
+    }).length;
+
+    const totalRequiredFields = requiredFields.length;
+    const progress =
+      totalRequiredFields > 0
+        ? Math.round((filledRequiredFields / totalRequiredFields) * 100)
+        : 0;
+
+    // Debug log to check calculation
+    console.log("Progress calculation (required fields only):", {
+      filledRequiredFields,
+      totalRequiredFields,
+      progress,
+      requiredFieldValues: requiredFields.map((field) => ({
+        field,
+        value: formData[field].value,
+        filled: String(formData[field].value).trim() !== "",
+      })),
+    });
+
+    return progress;
+  };
+
+  const getProgressMessage = () => {
+    const progress = calculateProgress();
+    if (progress === 0) return "You are about to onboard a new device.";
+    if (progress < 50)
+      return "Please continue filling the required fields to proceed.";
+    if (progress < 100)
+      return "Almost done! Complete the remaining required fields.";
+    return "All required fields completed! You can now save the device onboarding.";
+  };
+
+  // Add this helper function to check if form is complete
+  const isFormComplete = () => {
+    return calculateProgress() === 100;
+  };
 
   useEffect(() => {
     const initializeForm = async () => {
@@ -274,7 +296,7 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: e.target.value,
+          value: e.target.value, // This will be empty string when cleared
           error: "",
         },
       }));
@@ -286,7 +308,7 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: value as string,
+          value: value === null ? "" : (value as string), // Convert null to empty string
           error: "",
         },
       }));
@@ -304,25 +326,10 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
         if (!value.trim()) {
           error = "Device IMEI is required";
         }
-        // else if (value.length < 15 || value.length > 17) {
-        //   error = "IMEI should be 15-17 characters";
-        // }
         break;
       case "deviceSerialNo":
         if (!value.trim()) error = "Device Serial No is required";
         break;
-      // case "simNo1":
-      //   if (!value.trim()) error = "SIM No 1 is required";
-      //   break;
-      // case "simNo2":
-      //   if (!value.trim()) error = "SIM No 2 is required";
-      //   break;
-      // case "simNo1Operator":
-      //   if (!value.trim()) error = "SIM 1 Operator is required";
-      //   break;
-      // case "simNo2Operator":
-      //   if (!value.trim()) error = "SIM 2 Operator is required";
-      //   break;
       case "vehicleDescription":
         if (!value.trim()) error = "Vehicle Description is required";
         break;
@@ -338,14 +345,12 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
       case "deviceModule":
         if (!value.trim()) error = "Device Type is required";
         break;
-
       case "mobileNo1":
         if (!value.trim()) error = "Mobile Number 1 is required";
         break;
       case "mobileNo2":
         if (!value.trim()) error = "Mobile Number 2 is required";
         break;
-
       case "status":
         if (!value.trim()) error = "Status is required";
         break;
@@ -375,16 +380,6 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
       };
       isValid = false;
     }
-    // else if (
-    //   formData.deviceIMEI.value.length < 15 ||
-    //   formData.deviceIMEI.value.length > 17
-    // ) {
-    //   errors.deviceIMEI = {
-    //     ...formData.deviceIMEI,
-    //     error: "IMEI should be 15-17 characters",
-    //   };
-    //   isValid = false;
-    // }
 
     // Device Serial No validation
     if (!formData.deviceSerialNo.value.trim()) {
@@ -394,35 +389,6 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
       };
       isValid = false;
     }
-
-    // SIM No 1 validation
-    // if (!formData.simNo1.value.trim()) {
-    //   errors.simNo1 = { ...formData.simNo1, error: "SIM No 1 is required" };
-    //   isValid = false;
-    // }
-
-    // // SIM No 2 validation
-    // if (!formData.simNo2.value.trim()) {
-    //   errors.simNo2 = { ...formData.simNo2, error: "SIM No 2 is required" };
-    //   isValid = false;
-    // }
-
-    // // SIM Operator validations
-    // if (!formData.simNo1Operator.value.trim()) {
-    //   errors.simNo1Operator = {
-    //     ...formData.simNo1Operator,
-    //     error: "SIM 1 Operator is required",
-    //   };
-    //   isValid = false;
-    // }
-
-    // if (!formData.simNo2Operator.value.trim()) {
-    //   errors.simNo2Operator = {
-    //     ...formData.simNo2Operator,
-    //     error: "SIM 2 Operator is required",
-    //   };
-    //   isValid = false;
-    // }
 
     // Vehicle Description validation
     if (!formData.vehicleDescription.value.trim()) {
@@ -519,10 +485,6 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
         account: formData.account.value,
         deviceIMEI: formData.deviceIMEI.value,
         deviceSerialNo: formData.deviceSerialNo.value,
-        simNo1: formData.simNo1.value,
-        simNo2: formData.simNo2.value,
-        simNo1Operator: formData.simNo1Operator.value,
-        simNo2Operator: formData.simNo2Operator.value,
         vehicleDescription: formData.vehicleDescription.value,
         vehicleModule: formData.vehicleModule.value,
         vehicleMaster: formData.vehicleMaster.value,
@@ -608,7 +570,7 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-secondary">
+    <div className="min-h-screen bg-theme-secondary rounded-t-[24px] overflow-hidden flex flex-col">
       <ModuleHeader
         title={
           isEdit
@@ -616,217 +578,245 @@ const AddEditDeviceOnboardingForm: React.FC = () => {
             : strings.ADD_DEVICE_ONBOARDING
         }
         breadcrumbs={breadcrumbs}
-        showCancelButton
-        showSaveButton
-        onSaveClick={handleSave}
-        onCancelClick={handleCancel}
-        saveText={saving ? "Saving..." : "Save"}
+        className="rounded-t-[24px]"
+        titleClassName="module-title-custom" // Add this prop
       />
-
-      <div className="p-6">
-        <Card>
-          <Card.Body className="p-6">
-            {loadingDropdowns && (
-              <div className="flex items-center justify-center py-4 mb-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-                <span className="ml-2 text-gray-600">Loading form data...</span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Select
-                  label={strings.ACCOUNT_NAME}
-                  options={accountOptions}
-                  value={formData.account.value}
-                  onChange={handleSelectChange("account")}
-                  placeholder="Select Account"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.account.error}
-                />
-              </div>
-              <div>
-                <CustomInput
-                  label={strings.DEVICE_IMEI}
-                  value={formData.deviceIMEI.value}
-                  onChange={handleInputChange("deviceIMEI")}
-                  onBlur={handleBlur("deviceIMEI")}
-                  required
-                  placeholder="Enter device IMEI"
-                  disabled={saving || loadingDropdowns}
-                  autoValidate={false}
-                  error={formData.deviceIMEI.error}
-                />
-              </div>
-              <div>
-                <CustomInput
-                  label={strings.DEVICE_SERIAL_NO}
-                  value={formData.deviceSerialNo.value}
-                  onChange={handleInputChange("deviceSerialNo")}
-                  onBlur={handleBlur("deviceSerialNo")}
-                  required
-                  placeholder="Enter device serial number"
-                  disabled={saving || loadingDropdowns}
-                  autoValidate={false}
-                  error={formData.deviceSerialNo.error}
-                />
-              </div>
-              {/* <div>
-                <CustomInput
-                  label={strings.SIM_NO_1}
-                  value={formData.simNo1.value}
-                  onChange={handleInputChange("simNo1")}
-                  onBlur={handleBlur("simNo1")}
-                  required
-                  placeholder="Enter SIM number 1"
-                  disabled={saving || loadingDropdowns}
-                  autoValidate={false}
-                  error={formData.simNo1.error}
-                />
-              </div>
-              <div>
-                <CustomInput
-                  label={strings.SIM_NO_2}
-                  value={formData.simNo2.value}
-                  onChange={handleInputChange("simNo2")}
-                  onBlur={handleBlur("simNo2")}
-                  required
-                  placeholder="Enter SIM number 2"
-                  disabled={saving || loadingDropdowns}
-                  autoValidate={false}
-                  error={formData.simNo2.error}
-                />
-              </div>
-              <div>
-                <Select
-                  label={strings.SIM_NO_1_OPERATOR}
-                  options={simOperatorOptions}
-                  value={formData.simNo1Operator.value}
-                  onChange={handleSelectChange("simNo1Operator")}
-                  placeholder="Select SIM 1 Operator"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.simNo1Operator.error}
-                />
-              </div>
-              <div>
-                <Select
-                  label={strings.SIM_NO_2_OPERATOR}
-                  options={simOperatorOptions}
-                  value={formData.simNo2Operator.value}
-                  onChange={handleSelectChange("simNo2Operator")}
-                  placeholder="Select SIM 2 Operator"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.simNo2Operator.error}
-                />
-              </div> */}
-              <div>
-                <CustomInput
-                  label={strings.VEHICLE_DESCRIPTION}
-                  value={formData.vehicleDescription.value}
-                  onChange={handleInputChange("vehicleDescription")}
-                  onBlur={handleBlur("vehicleDescription")}
-                  required
-                  placeholder="Enter vehicle description"
-                  disabled={saving || loadingDropdowns}
-                  autoValidate={false}
-                  error={formData.vehicleDescription.error}
-                />
-              </div>
-              <div>
-                <Select
-                  label={strings.DEVICE_TYPE}
-                  options={deviceModuleOptions}
-                  value={formData.deviceModule.value}
-                  onChange={handleSelectChange("deviceModule")}
-                  placeholder="Select Device Type"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.deviceModule.error}
-                />
-              </div>
-              <div>
-                <Select
-                  label={strings.VEHICLE_MODEL_NAME}
-                  options={vehicleModuleOptions}
-                  value={formData.vehicleModule.value}
-                  onChange={handleSelectChange("vehicleModule")}
-                  placeholder="Select Vehicle Model"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.vehicleModule.error}
-                />
-              </div>
-              <div>
-                <Select
-                  label={strings.VEHICLE_MASTER}
-                  options={vehicleMasterOptions}
-                  value={formData.vehicleMaster.value}
-                  onChange={handleSelectChange("vehicleMaster")}
-                  placeholder="Select Vehicle Number"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.vehicleMaster.error}
-                />
-              </div>
-              <div>
-                <Select
-                  label={strings.DRIVER_SELECTION}
-                  options={driverModuleOptions}
-                  value={formData.driverModule.value}
-                  onChange={handleSelectChange("driverModule")}
-                  placeholder="Select Driver (Name - Aadhar)"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.driverModule.error}
-                />
-              </div>
-              <div>
-                <Select
-                  label={strings.MOBILE_NO_1}
-                  options={telecomMasterOptions}
-                  value={formData.mobileNo1.value}
-                  onChange={handleSelectChange("mobileNo1")}
-                  placeholder="Select Mobile Number 1"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.mobileNo1.error}
-                />
-              </div>
-              <div>
-                <Select
-                  label={strings.MOBILE_NO_2}
-                  options={telecomMasterOptions.filter(
-                    (option) => option.value !== formData.mobileNo1.value
-                  )}
-                  value={formData.mobileNo2.value}
-                  onChange={handleSelectChange("mobileNo2")}
-                  placeholder="Select Mobile Number 2"
-                  required
-                  disabled={saving || loadingDropdowns}
-                  error={formData.mobileNo2.error}
-                />
-              </div>
-              {isEdit && (
-                <div>
-                  <Select
-                    label="Status"
-                    options={statusOptions}
-                    value={formData.status.value}
-                    onChange={handleSelectChange("status")}
-                    placeholder="Select Status"
-                    required
-                    disabled={saving || loadingDropdowns}
-                    error={formData.status.error}
-                  />
+      {/* Main content area */}
+      <div className="flex-1">
+        <div className="p-6">
+          <Card className="p-6 !rounded-[24px]">
+            <Card.Body className="p-6">
+              {loadingDropdowns && (
+                <div className="flex items-center justify-center py-4 mb-6">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                  <span className="ml-2 text-gray-600">Loading form data...</span>
                 </div>
               )}
-            </div>
-          </Card.Body>
-        </Card>
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Select
+                    label={strings.ACCOUNT_NAME}
+                    options={accountOptions}
+                    value={formData.account.value}
+                    onChange={handleSelectChange("account")}
+                    onBlur={handleBlur("account")}
+                    placeholder="Select Account"
+                    required
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.account.error}
+                  />
+                </div>
+                <div>
+                  <CustomInput
+                    label={strings.DEVICE_IMEI}
+                    value={formData.deviceIMEI.value}
+                    onChange={handleInputChange("deviceIMEI")}
+                    onBlur={handleBlur("deviceIMEI")}
+                    required
+                    placeholder="Enter device IMEI"
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.deviceIMEI.error}
+                  />
+                </div>
+                <div>
+                  <CustomInput
+                    label={strings.DEVICE_SERIAL_NO}
+                    value={formData.deviceSerialNo.value}
+                    onChange={handleInputChange("deviceSerialNo")}
+                    onBlur={handleBlur("deviceSerialNo")}
+                    required
+                    placeholder="Enter device serial number"
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.deviceSerialNo.error}
+                  />
+                </div>
+                <div>
+                  <CustomInput
+                    label={strings.VEHICLE_DESCRIPTION}
+                    value={formData.vehicleDescription.value}
+                    onChange={handleInputChange("vehicleDescription")}
+                    onBlur={handleBlur("vehicleDescription")}
+                    required
+                    placeholder="Enter vehicle description"
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.vehicleDescription.error}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label={strings.DEVICE_TYPE}
+                    options={deviceModuleOptions}
+                    value={formData.deviceModule.value}
+                    onChange={handleSelectChange("deviceModule")}
+                    onBlur={handleBlur("deviceModule")}
+                    placeholder="Select Device Type"
+                    required
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.deviceModule.error}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label={strings.VEHICLE_MODEL_NAME}
+                    options={vehicleModuleOptions}
+                    value={formData.vehicleModule.value}
+                    onChange={handleSelectChange("vehicleModule")}
+                    onBlur={handleBlur("vehicleModule")}
+                    placeholder="Select Vehicle Model"
+                    required
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.vehicleModule.error}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label={strings.VEHICLE_MASTER}
+                    options={vehicleMasterOptions}
+                    value={formData.vehicleMaster.value}
+                    onChange={handleSelectChange("vehicleMaster")}
+                    onBlur={handleBlur("vehicleMaster")}
+                    placeholder="Select Vehicle Number"
+                    required
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.vehicleMaster.error}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label={strings.DRIVER_SELECTION}
+                    options={driverModuleOptions}
+                    value={formData.driverModule.value}
+                    onChange={handleSelectChange("driverModule")}
+                    onBlur={handleBlur("driverModule")}
+                    placeholder="Select Driver (Name - Aadhar)"
+                    required
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.driverModule.error}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label={strings.MOBILE_NO_1}
+                    options={telecomMasterOptions}
+                    value={formData.mobileNo1.value}
+                    onChange={handleSelectChange("mobileNo1")}
+                    onBlur={handleBlur("mobileNo1")}
+                    placeholder="Select Mobile Number 1"
+                    required
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.mobileNo1.error}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label={strings.MOBILE_NO_2}
+                    options={telecomMasterOptions.filter(
+                      (option) => option.value !== formData.mobileNo1.value
+                    )}
+                    value={formData.mobileNo2.value}
+                    onChange={handleSelectChange("mobileNo2")}
+                    onBlur={handleBlur("mobileNo2")}
+                    placeholder="Select Mobile Number 2"
+                    required
+                    disabled={saving || loadingDropdowns}
+                    autoValidate={false}
+                    error={formData.mobileNo2.error}
+                  />
+                </div>
+                {isEdit && (
+                  <div>
+                    <Select
+                      label="Status"
+                      options={statusOptions}
+                      value={formData.status.value}
+                      onChange={handleSelectChange("status")}
+                      onBlur={handleBlur("status")}
+                      placeholder="Select Status"
+                      required
+                      disabled={saving || loadingDropdowns}
+                      autoValidate={false}
+                      error={formData.status.error}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Progress Bar Section - Inside Card */}
+              <div className="mt-16">
+                <ProgressBar value={calculateProgress()} animated={true} />
+
+                {/* Message and Buttons on same line - Inside Card */}
+                <div className="flex items-center justify-between mt-4">
+                  {/* Progress Message */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#1F3A8A] flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    </div>
+                    <p className="text-sm text-[#1F3A8A] font-medium">
+                      {getProgressMessage()}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons - Update the Save button */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#F3F4F6",
+                        text: "#374151",
+                        border: "#E5E7EB",
+                        hover: { background: "#F1F1F1" },
+                      }}
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="btn-custom-hover border"
+                      size="lg"
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#1F3A8A",
+                        text: "#FFFFFF",
+                        hover: { background: "#1D40B0" },
+                      }}
+                      onClick={handleSave}
+                      loading={saving}
+                      disabled={saving || !isFormComplete()} // Disable if saving OR form incomplete
+                      className="btn-custom-hover"
+                      size="lg"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#1F3A8A] text-white py-4">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center text-sm">
+            Routeye software - All rights reserved - © 2025
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

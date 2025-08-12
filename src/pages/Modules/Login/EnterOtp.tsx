@@ -12,6 +12,7 @@ import strings from "../../../global/constants/StringConstants";
 import urls from "../../../constants/UrlConstants";
 import { useCountdown } from "../../../hooks/useCountdown";
 import { loginAction } from "../../../store/slices/authSlice";
+import { mapLoginResponseToAuthState } from "../../../utils/authUtils"; // ADD THIS IMPORT
 import { OtpInput } from "../../../components/ui/OtpInput";
 import { IoChevronForward, IoArrowBack } from "react-icons/io5";
 import { LanguageSelector } from "../../../components/ui/LanguageSelector";
@@ -88,7 +89,19 @@ export const EnterOtpPage: React.FC = () => {
         });
 
         if (response.success && "user" in response.data) {
-          // Store user data in Redux
+          // REPLACE THE MANUAL MAPPING WITH THE UTILITY FUNCTION
+          try {
+            const authData = mapLoginResponseToAuthState(response);
+            dispatch(loginAction(authData));
+            
+            toast.success(response.message || "OTP verified successfully");
+            navigate(urls.dashboardViewPath);
+          } catch (mappingError: any) {
+            console.error('Error mapping OTP response:', mappingError);
+            toast.error('Verification successful but failed to update session');
+          }
+
+          /* REMOVE THIS OLD CODE:
           dispatch(
             loginAction({
               authenticated: true,
@@ -106,6 +119,7 @@ export const EnterOtpPage: React.FC = () => {
 
           toast.success(response.message || "OTP verified successfully");
           navigate(urls.dashboardViewPath);
+          */
         }
       }
     } catch (error: any) {
@@ -232,8 +246,6 @@ export const EnterOtpPage: React.FC = () => {
             {strings.HAVING_TROUBLE_OTP}
           </button>
         </div>
-
-   
 
         {/* Action Buttons */}
         <div className="flex items-center gap-4">

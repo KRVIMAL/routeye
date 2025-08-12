@@ -102,6 +102,22 @@ export class UrlConstants {
 
   // Monitoring URLs 
   monitoringDevicesPath = "/monitoring/devices";
+
+
+   // Settings Routes
+  settingsViewPath = "/settings";
+  profileViewPath = "/profile";
+  
+  // API Routes
+  deviceApiPath = "/api/v1/devices";
+  vehicleApiPath = "/api/v1/vehicles";
+  clientApiPath = "/api/v1/clients";
+  driverApiPath = "/api/v1/drivers";
+  userApiPath = "/api/v1/users";
+  roleApiPath = "/api/v1/roles";
+  accountApiPath = "/api/v1/accounts";
+  alertApiPath = "/api/v1/alerts";
+  reportApiPath = "/api/v1/reports";
 }
 
 let urls = new UrlConstants();

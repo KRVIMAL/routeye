@@ -1,9 +1,10 @@
-// Vehicle Master services with proper pagination and relationship mapping
+// vehicleMasterServices.ts - Fixed Implementation with Filter API Integration
 import { Row } from "../../../../components/ui/DataTable/types";
 import {
   getRequest,
   postRequest,
   patchRequest,
+  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 
@@ -60,13 +61,33 @@ interface VehicleMasterData {
 interface VehicleMastersListResponse {
   data: VehicleMasterData[];
   pagination: {
-    page: string;
-    limit: string;
+    page: string | number;
+    limit: string | number;
     total: number;
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
   };
+  filterCounts?: {
+    vehicleNumbers?: Array<{ _id: string; count: number }>;
+    chassisNumbers?: Array<{ _id: string; count: number }>;
+    engineNumbers?: Array<{ _id: string; count: number }>;
+    vehicleModules?: Array<{ _id: string; count: number }>;
+    driverModules?: Array<{ _id: string; count: number }>;
+    statuses?: Array<{ _id: string; count: number }>;
+    vehcileMasterIds?: Array<{ _id: string; count: number }>;
+  };
+}
+
+interface FilterOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+interface FilterOptionsResponse {
+  options: FilterOption[];
+  total: number;
 }
 
 // Pagination response interface
@@ -78,6 +99,42 @@ interface PaginatedResponse<T> {
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
+}
+
+// Filter interface
+interface Filter {
+  field: string;
+  value: any[];
+  label?: string;
+}
+
+interface FilterSummaryResponse {
+  totalVehicleMasters: number;
+  statuses: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  vehicleBrands: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  vehicleTypes: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  vehicleStatuses: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  driverNames: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
 }
 
 // Vehicle Module interface for dropdown
@@ -135,23 +192,81 @@ const transformVehicleMasterToRow = (
 });
 
 export const vehicleMasterServices = {
+  // Updated getAll method - now uses filter API exclusively
   getAll: async (
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    searchText?: string,
+    sortField?: string,
+    sortDirection?: "asc" | "desc",
+    filters?: Filter[]
   ): Promise<PaginatedResponse<Row>> => {
     try {
-      const response: ApiResponse<VehicleMastersListResponse> =
-        await getRequest(urls.vehicleMastersViewPath, {
-          page,
-          limit,
+      const payload: any = {
+        page,
+        limit,
+      };
+
+      // Add search if provided
+      if (searchText && searchText.trim()) {
+        payload.searchText = searchText.trim();
+      }
+
+      // Add sorting if provided
+      if (sortField && sortDirection) {
+        payload.sortBy = sortField;
+        payload.sortOrder = sortDirection;
+      }
+
+      // Transform filters to the API format
+      if (filters && filters.length > 0) {
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "vehicleNumber":
+              payload.vehicleNumbers = filter.value;
+              break;
+            case "chassisNumber":
+              payload.chassisNumbers = filter.value;
+              break;
+            case "engineNumber":
+              payload.engineNumbers = filter.value;
+              break;
+            case "vehicleModule":
+              payload.vehicleModules = filter.value;
+              break;
+            case "driverModule":
+              payload.driverModules = filter.value;
+              break;
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "vehcileMasterId":
+              payload.vehcileMasterIds = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
         });
+      }
+
+      // Always use the filter endpoint
+      const response: ApiResponse<VehicleMastersListResponse> = await postRequest(
+        `${urls.vehicleMastersViewPath}/filter`,
+        payload
+      );
 
       if (response.success) {
         return {
           data: response.data.data.map(transformVehicleMasterToRow),
           total: response.data.pagination.total,
-          page: parseInt(response.data.pagination.page),
-          limit: parseInt(response.data.pagination.limit),
+          page:
+            typeof response.data.pagination.page === "string"
+              ? parseInt(response.data.pagination.page)
+              : response.data.pagination.page,
+          limit:
+            typeof response.data.pagination.limit === "string"
+              ? parseInt(response.data.pagination.limit)
+              : response.data.pagination.limit,
           totalPages: response.data.pagination.totalPages,
           hasNext: response.data.pagination.hasNext,
           hasPrev: response.data.pagination.hasPrev,
@@ -165,6 +280,58 @@ export const vehicleMasterServices = {
     }
   },
 
+  // Get filter options for a specific column
+  getFilterOptions: async (
+    column: string,
+    searchText?: string,
+    limit: number = 10
+  ): Promise<FilterOption[]> => {
+    try {
+      const params: any = { column, limit };
+
+      if (searchText && searchText.trim()) {
+        params.search = searchText.trim();
+      }
+
+      const response: ApiResponse<FilterOptionsResponse> = await getRequest(
+        `${urls.vehicleMastersViewPath}/filter-options`,
+        params
+      );
+
+      if (response.success) {
+        return response.data.options;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter options");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter options:", error.message);
+      throw new Error(error.message || "Failed to fetch filter options");
+    }
+  },
+
+  // Helper method to parse filter counts from filter API response
+  parseFilterCounts: (filterCounts: any, field: string): FilterOption[] => {
+    const fieldMapping: { [key: string]: string } = {
+      vehicleNumber: "vehicleNumbers",
+      chassisNumber: "chassisNumbers",
+      engineNumber: "engineNumbers",
+      vehicleModule: "vehicleModules",
+      driverModule: "driverModules",
+      status: "statuses",
+      vehcileMasterId: "vehcileMasterIds",
+    };
+
+    const apiField = fieldMapping[field] || `${field}s`;
+    const counts = filterCounts[apiField] || [];
+
+    return counts.map((item: any) => ({
+      value: item._id.toString(),
+      label: item._id.toString(),
+      count: item.count,
+    }));
+  },
+
+  // Get vehicle master by ID
   getById: async (id: string | number): Promise<Row | null> => {
     try {
       const response: ApiResponse<VehicleMasterData> = await getRequest(
@@ -189,6 +356,7 @@ export const vehicleMasterServices = {
     }
   },
 
+  // Create new vehicle master
   create: async (
     vehicleMasterData: Partial<Row>
   ): Promise<{ vehicleMaster: Row; message: string }> => {
@@ -199,6 +367,7 @@ export const vehicleMasterServices = {
         engineNumber: vehicleMasterData.engineNumber,
         vehicleModule: vehicleMasterData.vehicleModule,
         driverModule: vehicleMasterData.driverModule,
+        status: vehicleMasterData.status || "active",
       };
 
       const response: ApiResponse<VehicleMasterData> = await postRequest(
@@ -220,6 +389,7 @@ export const vehicleMasterServices = {
     }
   },
 
+  // Update vehicle master
   update: async (
     id: string | number,
     vehicleMasterData: Partial<Row>
@@ -241,7 +411,7 @@ export const vehicleMasterServices = {
       if (vehicleMasterData.status !== undefined)
         payload.status = vehicleMasterData.status;
 
-      const response: ApiResponse<VehicleMasterData> = await patchRequest(
+      const response: ApiResponse<VehicleMasterData> = await putRequest(
         `${urls.vehicleMastersViewPath}/${id}`,
         payload
       );
@@ -260,9 +430,10 @@ export const vehicleMasterServices = {
     }
   },
 
+  // Inactivate vehicle master (soft delete)
   inactivate: async (id: string | number): Promise<{ message: string }> => {
     try {
-      const response: ApiResponse<VehicleMasterData> = await patchRequest(
+      const response: ApiResponse<any> = await patchRequest(
         `${urls.vehicleMastersViewPath}/${id}`,
         {
           status: "inactive",
@@ -285,41 +456,130 @@ export const vehicleMasterServices = {
     }
   },
 
+  // Export vehicle masters - Updated to work with filters
+  export: async (filters?: Filter[]): Promise<Blob> => {
+    try {
+      let url = `${urls.vehicleMastersViewPath}/export`;
+      let requestOptions: RequestInit = {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      };
+
+      // If filters exist, use POST method with filter data
+      if (filters && filters.length > 0) {
+        const payload: any = {};
+
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "vehicleNumber":
+              payload.vehicleNumbers = filter.value;
+              break;
+            case "chassisNumber":
+              payload.chassisNumbers = filter.value;
+              break;
+            case "engineNumber":
+              payload.engineNumbers = filter.value;
+              break;
+            case "vehicleModule":
+              payload.vehicleModules = filter.value;
+              break;
+            case "driverModule":
+              payload.driverModules = filter.value;
+              break;
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "vehcileMasterId":
+              payload.vehcileMasterIds = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
+        });
+
+        requestOptions = {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        };
+
+        url = `${urls.vehicleMastersViewPath}/export-filtered`;
+      }
+
+      const response = await fetch(url, requestOptions);
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      return await response.blob();
+    } catch (error: any) {
+      console.error("Error exporting vehicle masters:", error.message);
+      throw new Error(error.message || "Failed to export vehicle masters");
+    }
+  },
+
+  // Import vehicle masters
+  import: async (file: File): Promise<{ message: string; errors?: any[] }> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${urls.vehicleMastersViewPath}/import`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        return {
+          message: result.message || "Vehicle Masters imported successfully",
+          errors: result.errors || [],
+        };
+      } else {
+        throw new Error(result.message || "Failed to import vehicle masters");
+      }
+    } catch (error: any) {
+      console.error("Error importing vehicle masters:", error.message);
+      throw new Error(error.message || "Failed to import vehicle masters");
+    }
+  },
+
+  // Get filter summary for dashboard
+  getFilterSummary: async (): Promise<FilterSummaryResponse> => {
+    try {
+      const response: ApiResponse<FilterSummaryResponse> = await getRequest(
+        `${urls.vehicleMastersViewPath}/filter-summary`
+      );
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter summary");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter summary:", error.message);
+      throw new Error(error.message || "Failed to fetch filter summary");
+    }
+  },
+
+  // Legacy search method for backwards compatibility
   search: async (
     searchText: string,
     page: number = 1,
     limit: number = 10
   ): Promise<PaginatedResponse<Row>> => {
-    try {
-      // If search is empty, return all vehicle masters
-      if (!searchText.trim()) {
-        return vehicleMasterServices.getAll(page, limit);
-      }
-
-      const response: ApiResponse<VehicleMastersListResponse> =
-        await getRequest(`${urls.vehicleMastersViewPath}/search`, {
-          searchText: searchText.trim(),
-          page,
-          limit,
-        });
-
-      if (response.success) {
-        return {
-          data: response.data.data.map(transformVehicleMasterToRow),
-          total: response.data.pagination.total,
-          page: parseInt(response.data.pagination.page),
-          limit: parseInt(response.data.pagination.limit),
-          totalPages: response.data.pagination.totalPages,
-          hasNext: response.data.pagination.hasNext,
-          hasPrev: response.data.pagination.hasPrev,
-        };
-      } else {
-        throw new Error(response.message || "Search failed");
-      }
-    } catch (error: any) {
-      console.error("Error searching vehicle masters:", error.message);
-      throw new Error(error.message || "Search failed");
-    }
+    // Use the new getAll method with search parameter
+    return vehicleMasterServices.getAll(page, limit, searchText);
   },
 
   // Get Vehicle Modules for dropdown
@@ -337,7 +597,6 @@ export const vehicleMasterServices = {
           limit: 0, // Get all records
         }
       );
-      // clg
 
       if (response.success) {
         return response.data.data.filter(

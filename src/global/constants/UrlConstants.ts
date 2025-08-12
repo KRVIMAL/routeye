@@ -1,9 +1,10 @@
 export class UrlConstants {
-  baseURL = import.meta.env.VITE_API_BASE_URL;
+  baseURL = import.meta.env.VITE_API_BASE_URL_LOCAL;
   landingViewPath = "/";
 
   // Device URLs
   devicesViewPath = "/devices";
+  devicesFilterPath= "/devices/filter";
   addDeviceViewPath = `${this.devicesViewPath}/add`;
   editDeviceViewPath = `${this.devicesViewPath}/edit`;
   // Client URLs
@@ -91,6 +92,21 @@ export class UrlConstants {
 
   // Monitoring URLs 
   monitoringDevicesPath = "/monitoring/devices";
+
+   // Settings Routes
+  settingsViewPath = "/settings";
+  profileViewPath = "/profile";
+  
+  // API Routes
+  deviceApiPath = "/api/v1/devices";
+  vehicleApiPath = "/api/v1/vehicles";
+  clientApiPath = "/api/v1/clients";
+  driverApiPath = "/api/v1/drivers";
+  userApiPath = "/api/v1/users";
+  roleApiPath = "/api/v1/roles";
+  accountApiPath = "/api/v1/accounts";
+  alertApiPath = "/api/v1/alerts";
+  reportApiPath = "/api/v1/reports";
 }
 
 let urls = new UrlConstants();

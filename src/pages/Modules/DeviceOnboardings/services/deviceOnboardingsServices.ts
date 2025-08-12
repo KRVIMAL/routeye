@@ -1,9 +1,10 @@
-// Device On-boarding services with complex relationship mapping
+// deviceOnboardingsServices.ts - Fixed Implementation with Filter API Integration
 import { Row } from "../../../../components/ui/DataTable/types";
 import {
   getRequest,
   postRequest,
   patchRequest,
+  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 import { store } from "../../../../store";
@@ -119,13 +120,35 @@ export interface TelecomMaster {
 interface DeviceOnboardingListResponse {
   data: DeviceOnboardingData[];
   pagination: {
-    page: string;
-    limit: string;
+    page: string | number;
+    limit: string | number;
     total: number;
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
   };
+  filterCounts?: {
+    statuses?: Array<{ _id: string; count: number }>;
+    accountNames?: Array<{ _id: string; count: number }>;
+    vehicleNumbers?: Array<{ _id: string; count: number }>;
+    driverNames?: Array<{ _id: string; count: number }>;
+    deviceTypes?: Array<{ _id: string; count: number }>;
+    telecomOperators?: Array<{ _id: string; count: number }>;
+    mobileNumbers?: Array<{ _id: string; count: number }>;
+    deviceIMEIs?: Array<{ _id: string; count: number }>;
+    deviceSerialNos?: Array<{ _id: string; count: number }>;
+  };
+}
+
+interface FilterOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+interface FilterOptionsResponse {
+  options: FilterOption[];
+  total: number;
 }
 
 // Pagination response interface
@@ -137,6 +160,52 @@ interface PaginatedResponse<T> {
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
+}
+
+// Filter interface
+interface Filter {
+  field: string;
+  value: any[];
+  label?: string;
+}
+
+interface FilterSummaryResponse {
+  totalDevices: number;
+  statuses: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  accountNames: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  vehicleNumbers: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  driverNames: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  deviceTypes: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  telecomOperators: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  mobileNumbers: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
 }
 
 // Vehicle Module interface for dropdown
@@ -230,8 +299,6 @@ const transformDeviceOnboardingToRow = (device: DeviceOnboardingData): Row => ({
   vehicleDescription: device.vehicleDescription,
   driverName: device.driverDetails?.name || "N/A",
   driverNo: device.driverDetails?.contactNo || "N/A",
-  //  deviceModelName: device.deviceDetails?.modelName || "N/A",
-  // deviceType: device.deviceDetails?.deviceType || "N/A",
   status: device.status || "active",
   createdTime: device.createdAt,
   updatedTime: device.updatedAt,
@@ -250,23 +317,85 @@ const transformDeviceOnboardingToRow = (device: DeviceOnboardingData): Row => ({
 });
 
 export const deviceOnboardingServices = {
+  // Updated getAll method - now uses filter API exclusively
   getAll: async (
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    searchText?: string,
+    sortField?: string,
+    sortDirection?: "asc" | "desc",
+    filters?: Filter[]
   ): Promise<PaginatedResponse<Row>> => {
     try {
-      const response: ApiResponse<DeviceOnboardingListResponse> =
-        await getRequest(urls.deviceOnboardingViewPath, {
-          page,
-          limit,
+      const payload: any = {
+        page,
+        limit,
+      };
+
+      // Add search if provided
+      if (searchText && searchText.trim()) {
+        payload.searchText = searchText.trim();
+      }
+
+      // Add sorting if provided
+      if (sortField && sortDirection) {
+        payload.sortBy = sortField;
+        payload.sortOrder = sortDirection;
+      }
+
+      // Transform filters to the API format
+      if (filters && filters.length > 0) {
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "accountName":
+              payload.accountNames = filter.value;
+              break;
+            case "vehicleNo":
+              payload.vehicleNumbers = filter.value;
+              break;
+            case "driverName":
+              payload.driverNames = filter.value;
+              break;
+            case "deviceType":
+              payload.deviceTypes = filter.value;
+              break;
+            case "telecomMaster1":
+            case "telecomMaster2":
+              payload.mobileNumbers = filter.value;
+              break;
+            case "deviceIMEI":
+              payload.deviceIMEIs = filter.value;
+              break;
+            case "deviceSerialNo":
+              payload.deviceSerialNos = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
         });
+      }
+
+      // Always use the filter endpoint
+      const response: ApiResponse<DeviceOnboardingListResponse> = await postRequest(
+        `${urls.deviceOnboardingViewPath}/filter`,
+        payload
+      );
 
       if (response.success) {
         return {
           data: response.data.data.map(transformDeviceOnboardingToRow),
           total: response.data.pagination.total,
-          page: parseInt(response.data.pagination.page),
-          limit: parseInt(response.data.pagination.limit),
+          page:
+            typeof response.data.pagination.page === "string"
+              ? parseInt(response.data.pagination.page)
+              : response.data.pagination.page,
+          limit:
+            typeof response.data.pagination.limit === "string"
+              ? parseInt(response.data.pagination.limit)
+              : response.data.pagination.limit,
           totalPages: response.data.pagination.totalPages,
           hasNext: response.data.pagination.hasNext,
           hasPrev: response.data.pagination.hasPrev,
@@ -280,6 +409,59 @@ export const deviceOnboardingServices = {
       console.error("Error fetching device onboardings:", error.message);
       throw new Error(error.message || "Failed to fetch device onboardings");
     }
+  },
+
+  // Get filter options for a specific column
+  getFilterOptions: async (
+    column: string,
+    searchText?: string,
+    limit: number = 10
+  ): Promise<FilterOption[]> => {
+    try {
+      const params: any = { column, limit };
+
+      if (searchText && searchText.trim()) {
+        params.search = searchText.trim();
+      }
+
+      const response: ApiResponse<FilterOptionsResponse> = await getRequest(
+        `${urls.deviceOnboardingViewPath}/filter-options`,
+        params
+      );
+
+      if (response.success) {
+        return response.data.options;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter options");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter options:", error.message);
+      throw new Error(error.message || "Failed to fetch filter options");
+    }
+  },
+
+  // Helper method to parse filter counts from filter API response
+  parseFilterCounts: (filterCounts: any, field: string): FilterOption[] => {
+    const fieldMapping: { [key: string]: string } = {
+      status: "statuses",
+      accountName: "accountNames",
+      vehicleNo: "vehicleNumbers",
+      driverName: "driverNames",
+      deviceType: "deviceTypes",
+      telecomOperators: "telecomOperators",
+      mobileNumbers: "mobileNumbers",
+      deviceIMEI: "deviceIMEIs",
+      deviceSerialNo: "deviceSerialNos",
+    };
+
+    const apiField = fieldMapping[field] || `${field}s`;
+    const counts = filterCounts[apiField] || [];
+
+    return counts.map((item: any) => ({
+      value: item._id.toString(),
+      label: item._id.toString(),
+      count: item.count,
+    }));
   },
 
   getById: async (id: string | number): Promise<Row | null> => {
@@ -314,10 +496,6 @@ export const deviceOnboardingServices = {
         deviceIMEI: deviceData.deviceIMEI,
         deviceSerialNo: deviceData.deviceSerialNo,
         vehicleNo: deviceData.vehicleModule,
-        // simNo1: deviceData.simNo1,
-        // simNo2: deviceData.simNo2,
-        // simNo1Operator: deviceData.simNo1Operator,
-        // simNo2Operator: deviceData.simNo2Operator,
         vehicleDescription: deviceData.vehicleDescription,
         vehicle: deviceData.vehicleMaster,
         driver: deviceData.driverModule,
@@ -383,6 +561,7 @@ export const deviceOnboardingServices = {
         payload.mobileNo1 = deviceData.mobileNo1;
       if (deviceData.mobileNo2 !== undefined)
         payload.mobileNo2 = deviceData.mobileNo2;
+
       const response: ApiResponse<DeviceOnboardingData> = await patchRequest(
         `${urls.deviceOnboardingViewPath}/${id}`,
         payload
@@ -426,40 +605,134 @@ export const deviceOnboardingServices = {
     }
   },
 
+  // Export devices - Updated to work with filters
+  export: async (filters?: Filter[]): Promise<Blob> => {
+    try {
+      let url = `${urls.deviceOnboardingViewPath}/export`;
+      let requestOptions: RequestInit = {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      };
+
+      // If filters exist, use POST method with filter data
+      if (filters && filters.length > 0) {
+        const payload: any = {};
+
+        filters.forEach((filter) => {
+          switch (filter.field) {
+            case "status":
+              payload.statuses = filter.value;
+              break;
+            case "accountName":
+              payload.accountNames = filter.value;
+              break;
+            case "vehicleNo":
+              payload.vehicleNumbers = filter.value;
+              break;
+            case "driverName":
+              payload.driverNames = filter.value;
+              break;
+            case "deviceType":
+              payload.deviceTypes = filter.value;
+              break;
+            case "telecomMaster1":
+            case "telecomMaster2":
+              payload.mobileNumbers = filter.value;
+              break;
+            case "deviceIMEI":
+              payload.deviceIMEIs = filter.value;
+              break;
+            case "deviceSerialNo":
+              payload.deviceSerialNos = filter.value;
+              break;
+            default:
+              payload[`${filter.field}s`] = filter.value;
+          }
+        });
+
+        requestOptions = {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        };
+
+        url = `${urls.deviceOnboardingViewPath}/export-filtered`;
+      }
+
+      const response = await fetch(url, requestOptions);
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      return await response.blob();
+    } catch (error: any) {
+      console.error("Error exporting devices:", error.message);
+      throw new Error(error.message || "Failed to export devices");
+    }
+  },
+
+  // Import devices
+  import: async (file: File): Promise<{ message: string; errors?: any[] }> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${urls.deviceOnboardingViewPath}/import`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        return {
+          message: result.message || "Devices imported successfully",
+          errors: result.errors || [],
+        };
+      } else {
+        throw new Error(result.message || "Failed to import devices");
+      }
+    } catch (error: any) {
+      console.error("Error importing devices:", error.message);
+      throw new Error(error.message || "Failed to import devices");
+    }
+  },
+
+  // Get filter summary for dashboard
+  getFilterSummary: async (): Promise<FilterSummaryResponse> => {
+    try {
+      const response: ApiResponse<FilterSummaryResponse> = await getRequest(
+        `${urls.deviceOnboardingViewPath}/filter-summary`
+      );
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to fetch filter summary");
+      }
+    } catch (error: any) {
+      console.error("Error fetching filter summary:", error.message);
+      throw new Error(error.message || "Failed to fetch filter summary");
+    }
+  },
+
+  // Legacy search method for backwards compatibility
   search: async (
     searchText: string,
     page: number = 1,
     limit: number = 10
   ): Promise<PaginatedResponse<Row>> => {
-    try {
-      if (!searchText.trim()) {
-        return deviceOnboardingServices.getAll(page, limit);
-      }
-
-      const response: ApiResponse<DeviceOnboardingListResponse> =
-        await getRequest(`${urls.deviceOnboardingViewPath}/search`, {
-          searchText: searchText.trim(),
-          page,
-          limit,
-        });
-
-      if (response.success) {
-        return {
-          data: response.data.data.map(transformDeviceOnboardingToRow),
-          total: response.data.pagination.total,
-          page: parseInt(response.data.pagination.page),
-          limit: parseInt(response.data.pagination.limit),
-          totalPages: response.data.pagination.totalPages,
-          hasNext: response.data.pagination.hasNext,
-          hasPrev: response.data.pagination.hasPrev,
-        };
-      } else {
-        throw new Error(response.message || "Search failed");
-      }
-    } catch (error: any) {
-      console.error("Error searching device onboardings:", error.message);
-      throw new Error(error.message || "Search failed");
-    }
+    // Use the new getAll method with search parameter
+    return deviceOnboardingServices.getAll(page, limit, searchText);
   },
 
   // Get Vehicle Modules for dropdown

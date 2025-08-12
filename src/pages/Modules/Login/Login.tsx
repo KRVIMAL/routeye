@@ -8,6 +8,8 @@ import { GoogleSignInButton } from "../../../components/ui/GoogleSignInButton";
 import { authServices } from "./services/authServices";
 
 import { flagLoading } from "../../../store/slices/customLoaderSlice";
+import { loginAction } from "../../../store/slices/authSlice"; // Add this import
+import { mapLoginResponseToAuthState } from "../../../utils/authUtils"; // Add this import
 
 import strings from "../../../global/constants/StringConstants";
 import urls from "../../../constants/UrlConstants";
@@ -83,9 +85,18 @@ export const LoginPage: React.FC = () => {
             },
           });
         } else {
-          // Direct login success - should not happen with 2FA enabled users
-          toast.success(response.message || "Login successful");
-          navigate(urls.dashboardViewPath);
+          // Direct login success - dispatch auth action
+          try {
+            const authData = mapLoginResponseToAuthState(response);
+            dispatch(loginAction(authData));
+            
+            console.log('Login successful, auth state updated');
+            toast.success(response.message || "Login successful");
+            navigate(urls.dashboardViewPath);
+          } catch (mappingError: any) {
+            console.error('Error mapping login response:', mappingError);
+            toast.error('Login successful but failed to update session');
+          }
         }
       }
     } catch (error: any) {
