@@ -177,10 +177,10 @@ const NavbarContent: React.FC<NavbarProps> = ({ className = "" }) => {
           setActiveTab("Appearance Setting");
           break;
         default:
-          setActiveTab("Roles & Rights");
+          setActiveTab("Accounts");
       }
     } else {
-      setActiveTab("All Device");
+      setActiveTab("Accounts");
     }
   }, [
     location.pathname,
@@ -481,7 +481,7 @@ const NavbarContent: React.FC<NavbarProps> = ({ className = "" }) => {
                 selected={activeTab}
                 onChange={handleTabChange}
                 orientation="horizontal"
-                size={needsScroll ? "sm" : "sm"}
+                size={needsScroll ? "sm" : "md"}
                 scrollable={false}
                 className="flex-nowrap"
               />

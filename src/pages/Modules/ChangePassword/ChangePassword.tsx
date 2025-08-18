@@ -13,6 +13,7 @@ import { tabTitle } from "../../../utils/tab-title";
 import { store } from "../../../store";
 import { logOutAction } from "../../../store/slices/authSlice";
 import PasswordChangeSuccessModal from "../../../components/PasswordChangeSuccessModal";
+import { CloudCog } from "lucide-react";
 // import { logOutAction } from "../../../store/auth/authSlice";
 // import PasswordChangeSuccessModal from "./components/PasswordChangeSuccessModal";
 
@@ -64,11 +65,15 @@ const ChangePassword: React.FC = () => {
   });
 
   // Get user data from store
-  const user = store.getState()?.auth?.user;
-  const userName = store.getState()?.auth?.userName || user?.fullName || "User";
-  const userEmail = store.getState()?.auth?.userEmail || user?.email || "";
-  const userRole = store.getState()?.auth?.userRole || user?.role?.name || "";
+  const routeyeState :any= localStorage.getItem("routeye-state");
+    const parsedState = JSON.parse(routeyeState);
+  const user = parsedState?.auth?.user;
+  const userName =  user?.fullName || "User";
+  const userEmail =  user?.email || "";
+  const userRole =  user?.role?.name || "";
 
+     
+    
   // Get user initials for avatar
   const getUserInitials = (name: string) => {
     return name

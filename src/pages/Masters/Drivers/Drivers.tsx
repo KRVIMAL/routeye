@@ -213,7 +213,7 @@ const Drivers: React.FC = () => {
         width: 120,
         type: "date",
         sortable: true,
-        filterable: false,
+        filterable:true,
         resizable: true,
         renderCell: (params) => (
           <span>{new Date(params.value).toLocaleString()}</span>

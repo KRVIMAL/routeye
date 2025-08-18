@@ -5,27 +5,13 @@ import { useSelector } from "react-redux";
 import { selectUserName } from "../store/slices/authSlice";
 import { useTheme } from "../hooks/useTheme";
 import { usePermissions } from "../hooks/usePermissions";
-import {
-  FiHome,
-  FiGrid,
-  FiSmartphone,
-  FiTruck,
-  FiUsers,
-  FiMapPin,
-  FiSettings,
-  FiMap,
-  FiAlertTriangle,
-  FiFileText,
-  FiUser,
-  FiSun,
-  FiMoon,
-} from "react-icons/fi";
-import { Crown } from "lucide-react";
+import { FiMapPin } from "react-icons/fi";
+import { Crown, SquareUser, User, UserCog } from "lucide-react";
 
 interface SidebarItem {
   id: string;
   name: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string }> | any;
   href: string;
 }
 
@@ -34,20 +20,20 @@ const sidebarConfig: SidebarItem[] = [
   {
     id: "admin",
     name: "ADMIN",
-    icon: FiSettings,
+    icon: UserCog,
     href: "/management/overview",
   },
   {
     id: "superadmin",
-    name: "SUPER ADMIN", 
+    name: "SUPER ADMIN",
     icon: Crown,
     href: "/management/overview",
   },
   {
     id: "account-management",
     name: "ACCOUNT MANAGEMENT",
-    icon: FiUser,
-    href: "/account-management/roles",
+    icon: SquareUser,
+    href: "/account-management/accounts",
   },
 ];
 
@@ -65,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
     switch (itemId) {
       case "admin":
         // Show admin menu only for admin role users with proper permissions
-        return isAdmin() && hasPermission('USER', 'VIEW'); // Check if user has at least some admin permissions
+        return isAdmin() && hasPermission("USER", "VIEW"); // Check if user has at least some admin permissions
       case "superadmin":
         // Show superadmin menu only for superadmin role users
         return isSuperAdmin();
@@ -78,7 +64,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
   };
 
   // Filter sidebar items based on role-based access
-  const visibleSidebarItems = sidebarConfig.filter((item) => hasAccess(item.id));
+  const visibleSidebarItems = sidebarConfig.filter((item) =>
+    hasAccess(item.id)
+  );
 
   return (
     <div
@@ -118,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
               }
               style={{
                 width: "69.0625px",
-                height: "42.5px",
+                height: "50.5px",
                 paddingTop: "4.88px",
                 paddingBottom: "4.88px",
                 gap: "3.25px",
@@ -127,13 +115,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
             >
               {({ isActive }) => (
                 <>
-                  <item.icon
-                    className={`w-5 h-5 mb-1 transition-colors ${
-                      isActive
-                        ? "text-white"
-                        : "text-white/70 group-hover:text-white"
-                    }`}
-                  />
+                  <div className="w-5 h-5 mb-1 flex items-center justify-center">
+                    <item.icon
+                      className={`w-full h-full transition-colors ${
+                        isActive
+                          ? "text-white"
+                          : "text-white/70 group-hover:text-white"
+                      }`}
+                    />
+                  </div>
                   <span
                     className={`text-[8px] font-medium text-center leading-tight px-1 ${
                       isActive
@@ -179,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
           title={`Profile - ${userName || "User"}`}
         >
           <div className="w-4 h-4 mb-1 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30">
-            <FiUser className="w-3 h-3 group-hover:text-white" />
+            <User className="w-3 h-3 group-hover:text-white" />
           </div>
           <span className="text-[8px] font-medium text-center leading-tight">
             PROFILE
