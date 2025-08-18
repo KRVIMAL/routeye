@@ -103,24 +103,42 @@ export const putRequest = async (url: string, data = {}) => {
 };
 
 // Export service for downloading files
+// Export service for downloading files
 export const exportService = {
   exportData: async (
     modulePath: string,
     format: "csv" | "xlsx" | "pdf",
-    filename?: string
+    filename?: string,
+    queryParams?: { [key: string]: string }
   ) => {
     try {
-      const response = await fetch(
-        `${urls.baseURL}${modulePath}?format=${format}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            // Add authentication headers if needed
-            // 'Authorization': `Bearer ${getAuthToken()}`,
-          },
-        }
-      );
+      // Build URL with query parameters
+      let url = `${urls.baseURL}${modulePath}?format=${format}`;
+      
+      if (queryParams) {
+        const params = new URLSearchParams(queryParams);
+        url += `&${params.toString()}`;
+      }
+
+      // Add Authorization token if available
+      const stateData = localStorage.getItem("routeye-state");
+      const data = JSON.parse(stateData!);
+      const state = data?.auth;
+      const token = state.accessToken;
+      const tokenType = state.tokenType || "Bearer";
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      if (token && state.isAuthenticated) {
+        headers.Authorization = `${tokenType} ${token}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: headers,
+      });
 
       if (!response.ok) {
         throw new Error(`Export failed: ${response.statusText}`);
@@ -129,9 +147,9 @@ export const exportService = {
       const blob = await response.blob();
 
       // Create download
-      const url = URL.createObjectURL(blob);
+      const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = downloadUrl;
 
       const timestamp = new Date().toISOString().split("T")[0];
       const defaultFilename = filename || "export";
@@ -140,7 +158,7 @@ export const exportService = {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(downloadUrl);
 
       return { success: true };
     } catch (error: any) {

@@ -53,7 +53,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       </Button>
       <Button
         size="sm"
-        variant="error"
+        // variant="error"
         onClick={onDelete}
         className="p-2"
       >

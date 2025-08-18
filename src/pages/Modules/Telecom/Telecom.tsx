@@ -1,7 +1,7 @@
-// GroupsMasterPage.tsx - Complete Implementation
+// TelecomPage.tsx - Complete Implementation
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiHome, FiUsers } from "react-icons/fi";
+import { FiHome, FiPhone } from "react-icons/fi";
 import ModuleHeader from "../../../components/ui/ModuleHeader";
 import CustomTable, {
   ExportFormat,
@@ -10,14 +10,14 @@ import strings from "../../../global/constants/StringConstants";
 import urls from "../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
 import { tabTitle } from "../../../utils/tab-title";
-import { groupsMasterServices } from "./services/groupsMaster.services";
-import { transformGroupsMasterData } from "../../../components/CustomSummary/utils/summaryDataTransformers";
-import { FaUsers, FaLayerGroup } from "react-icons/fa";
+import { transformTelecomsData } from "../../../components/CustomSummary/utils/summaryDataTransformers";
+import { FaPhone, FaSimCard } from "react-icons/fa";
 import CustomSummary, {
   SummaryCard,
 } from "../../../components/CustomSummary/CustomSummary";
 import { getConfigPreset } from "../../../components/CustomSummary/utils/summaryConfigPresets";
 import { store } from "../../../store";
+import { telecomServices } from "./services/telecomServices";
 import { exportService } from "../../../core-services/rest-api/apiHelpers";
 
 // Types
@@ -37,6 +37,7 @@ interface Row {
   id: string | number;
   [key: string]: any;
 }
+
 // Updated Filter interface to support date filters
 interface DateFilter {
   dateField: string;
@@ -63,41 +64,51 @@ interface FilterOption {
 }
 
 // Summary data interface (from your API)
-interface GroupSummaryData {
-  totalGroups: number;
-  groupTypes: Array<{
+interface TelecomSummaryData {
+  totalTelecoms: number;
+  simTypes: Array<{
     count: number;
     value: string;
     label: string;
+  }>;
+  billingTypes: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  telecomOperators: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  networkProfile1Generations: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  networkProfile2Generations: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  numberOfNetworkProfiles: Array<{
+    count: number;
+    value: number;
+    label: number;
   }>;
   statuses: Array<{
     count: number;
     value: string;
     label: string;
   }>;
-  stateNames: Array<{
-    count: number;
-    value: string;
-    label: string;
-  }>;
-  cityNames: Array<{
-    count: number;
-    value: string;
-    label: string;
-  }>;
-  deviceCounts: Array<{
-    count: number;
-    value: string;
-    label: string;
-  }>;
 }
 
-const GroupsMaster: React.FC = () => {
+const Telecom: React.FC = () => {
   const navigate = useNavigate();
-  tabTitle(strings.GROUPS_MASTER);
+  tabTitle(strings.TELECOM);
 
   // State management
-  const [groupsMaster, setGroupsMaster] = useState<Row[]>([]);
+  const [telecoms, setTelecoms] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [sortConfig, setSortConfig] = useState<{
@@ -113,13 +124,15 @@ const GroupsMaster: React.FC = () => {
   const [totalRows, setTotalRows] = useState(0);
 
   // Summary-specific state
-  const [summaryData, setSummaryData] = useState<GroupSummaryData | null>(null);
+  const [summaryData, setSummaryData] = useState<TelecomSummaryData | null>(
+    null
+  );
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
   // Load saved filters on mount (optional)
   useEffect(() => {
-    const savedFilters = localStorage.getItem("groups_master_filters");
+    const savedFilters = localStorage.getItem("telecoms_filters");
     if (savedFilters) {
       try {
         const filters = JSON.parse(savedFilters);
@@ -133,12 +146,9 @@ const GroupsMaster: React.FC = () => {
   // Save filters to localStorage when they change (optional)
   useEffect(() => {
     if (activeFilters.length > 0) {
-      localStorage.setItem(
-        "groups_master_filters",
-        JSON.stringify(activeFilters)
-      );
+      localStorage.setItem("telecoms_filters", JSON.stringify(activeFilters));
     } else {
-      localStorage.removeItem("groups_master_filters");
+      localStorage.removeItem("telecoms_filters");
     }
   }, [activeFilters]);
 
@@ -146,83 +156,135 @@ const GroupsMaster: React.FC = () => {
   const columns: Column[] = useMemo(
     () => [
       {
-        field: "groupId",
-        headerName: "Group ID",
+        field: "telecomId",
+        headerName: "Telecom ID",
         width: 120,
         sortable: true,
         filterable: true,
         resizable: true,
       },
       {
-        field: "groupName",
-        headerName: "Group Name",
-        width: 150,
-        sortable: true,
-        filterable: true,
-        resizable: true,
-      },
-      {
-        field: "groupType",
-        headerName: "Group Type",
-        width: 150,
+        field: "telecomOperator",
+        headerName: "Operator",
+        width: 140,
         sortable: true,
         filterable: true,
         resizable: true,
         renderCell: (params) => (
-          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
             {params.value}
           </span>
         ),
       },
       {
-        field: "imeiDisplay",
-        headerName: "Assets/IMEI",
-        width: 200,
-        sortable: false,
-        filterable: false,
+        field: "simType",
+        headerName: "SIM Type",
+        width: 100,
+        sortable: true,
+        filterable: true,
         resizable: true,
         renderCell: (params) => (
-          <div className="truncate" title={params.value}>
-            {params.value}
-          </div>
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              params.value === "esim"
+                ? "bg-blue-100 text-blue-800"
+                : "bg-green-100 text-green-800"
+            }`}
+          >
+            {params.value?.toUpperCase()}
+          </span>
         ),
       },
       {
-        field: "stateName",
-        headerName: "State Name",
+        field: "numberOfNetworkProfiles",
+        headerName: "Network Profiles",
         width: 130,
+        type: "number",
         sortable: true,
         filterable: true,
         resizable: true,
+        renderCell: (params) => (
+          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
+            {params.value} Profile{params.value > 1 ? "s" : ""}
+          </span>
+        ),
       },
       {
-        field: "cityName",
-        headerName: "City Name",
-        width: 130,
-        sortable: true,
-        filterable: true,
-        resizable: true,
-      },
-      {
-        field: "remark",
-        headerName: "Remark",
+        field: "networkProfile1",
+        headerName: "Network Profile 1",
         width: 150,
         sortable: true,
         filterable: true,
         resizable: true,
-        renderCell: (params) => (
-          <div className="truncate" title={params.value}>
-            {params.value}
-          </div>
-        ),
       },
       {
-        field: "contactNo",
-        headerName: "Contact No",
-        width: 130,
+        field: "networkProfile2",
+        headerName: "Network Profile 2",
+        width: 150,
         sortable: true,
         filterable: true,
         resizable: true,
+      },
+      {
+        field: "networkProfile1Generation",
+        headerName: "Profile 1 Gen",
+        width: 120,
+        sortable: true,
+        filterable: true,
+        resizable: true,
+        renderCell: (params) => (
+          <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium">
+            {params.value?.toUpperCase()}
+          </span>
+        ),
+      },
+      {
+        field: "networkProfile2Generation",
+        headerName: "Profile 2 Gen",
+        width: 120,
+        sortable: true,
+        filterable: true,
+        resizable: true,
+        renderCell: (params) => (
+          <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium">
+            {params.value?.toUpperCase()}
+          </span>
+        ),
+      },
+      {
+        field: "networkProfile1APN",
+        headerName: "Profile 1 APN",
+        width: 140,
+        sortable: true,
+        filterable: true,
+        resizable: true,
+      },
+      {
+        field: "networkProfile2APN",
+        headerName: "Profile 2 APN",
+        width: 140,
+        sortable: true,
+        filterable: true,
+        resizable: true,
+      },
+      {
+        field: "billingType",
+        headerName: "Billing Type",
+        width: 100,
+        sortable: true,
+        filterable: true,
+        resizable: true,
+        renderCell: (params) => (
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              params.value === "postpaid"
+                ? "bg-green-100 text-green-800"
+                : "bg-orange-100 text-orange-800"
+            }`}
+          >
+            {params.value?.charAt(0).toUpperCase() + params.value?.slice(1)}
+          </span>
+        ),
       },
       {
         field: "status",
@@ -249,7 +311,7 @@ const GroupsMaster: React.FC = () => {
         width: 120,
         type: "date",
         sortable: true,
-        filterable: false,
+        filterable: true,
         resizable: true,
         renderCell: (params) => (
           <span>{new Date(params.value).toLocaleString()}</span>
@@ -283,9 +345,10 @@ const GroupsMaster: React.FC = () => {
     []
   );
 
+  console.log(store, "state");
   const breadcrumbs = [
     { label: strings.HOME, href: "/", icon: FiHome },
-    { label: strings.GROUPS_MASTER, isActive: true, icon: FiUsers },
+    { label: strings.TELECOM, isActive: true, icon: FiPhone },
   ];
 
   // Load summary data from API
@@ -293,7 +356,7 @@ const GroupsMaster: React.FC = () => {
     setSummaryLoading(true);
     setSummaryError(null);
     try {
-      const data = await groupsMasterServices.getFilterSummary();
+      const data = await telecomServices.getFilterSummary();
       setSummaryData(data);
     } catch (error: any) {
       console.error("Error loading summary data:", error);
@@ -304,8 +367,8 @@ const GroupsMaster: React.FC = () => {
     }
   }, []);
 
-  // Load groups master method
-  const loadGroupsMaster = useCallback(
+  // Load telecoms method
+  const loadTelecoms = useCallback(
     async (
       search: string = searchValue,
       page: number = currentPage,
@@ -317,7 +380,7 @@ const GroupsMaster: React.FC = () => {
       setLoading(true);
       try {
         // Always use getAll - it now uses filter API internally
-        const result = await groupsMasterServices.getAll(
+        const result = await telecomServices.getAll(
           page,
           limit,
           search,
@@ -326,12 +389,12 @@ const GroupsMaster: React.FC = () => {
           filters
         );
 
-        setGroupsMaster(result.data);
+        setTelecoms(result.data);
         setTotalRows(result.total);
         setCurrentPage(result.page);
       } catch (error: any) {
-        console.error("Error loading groups master:", error);
-        toast.error(error.message || "Failed to fetch groups master");
+        console.error("Error loading telecoms:", error);
+        toast.error(error.message || "Failed to fetch telecoms");
       } finally {
         setLoading(false);
       }
@@ -345,22 +408,22 @@ const GroupsMaster: React.FC = () => {
 
   // Initial load
   useEffect(() => {
-    loadGroupsMaster();
+    loadTelecoms();
   }, []);
 
   // Transform API data to summary cards
   const summaryCards = useMemo((): SummaryCard[] => {
     if (!summaryData) return [];
 
-    return transformGroupsMasterData(summaryData, {
-      totalIcon: React.createElement(FaUsers),
-      inactiveIcon: React.createElement(FaLayerGroup),
+    return transformTelecomsData(summaryData, {
+      totalIcon: React.createElement(FaPhone),
+      inactiveIcon: React.createElement(FaSimCard),
     });
   }, [summaryData]);
 
   // Summary configuration
   const summaryConfig = useMemo(() => {
-    return getConfigPreset("groups-master", {
+    return getConfigPreset("telecoms", {
       title: "Summary", // Custom title
       // You can override any other config here
       // onCardClick: undefined, // Will be passed as prop instead
@@ -373,29 +436,23 @@ const GroupsMaster: React.FC = () => {
 
     // Navigate based on card type
     switch (card.id) {
-      case "groupmaster-types":
-        // You could apply filters to the table or navigate to filtered view
-        console.log("Navigate to group types view");
+      case "sim-types":
+        console.log("Navigate to SIM types view");
         break;
-      case "groupmaster-statuses":
-        console.log("Navigate to status view");
+      case "billing-types":
+        console.log("Navigate to billing types view");
         break;
-      case "groupmaster-states":
-        console.log("Navigate to states view");
+      case "telecom-operators":
+        console.log("Navigate to operators view");
         break;
-      case "groupmaster-cities":
-        console.log("Navigate to cities view");
+      case "network-generations":
+        console.log("Navigate to network generations view");
         break;
-      case "groupmaster-devices":
-        console.log("Navigate to devices view");
+      case "total-telecoms":
+        console.log("Show all telecoms");
         break;
-      case "total-groups-master":
-        console.log("Show all groups");
-        break;
-      case "inactive-groups-master":
-        // Apply inactive filter to current table
-        console.log("Show inactive groups");
-        // You could call handleFilter here to filter the table
+      case "inactive-telecoms":
+        console.log("Show inactive telecoms");
         break;
       default:
         break;
@@ -407,7 +464,7 @@ const GroupsMaster: React.FC = () => {
     (searchText: string) => {
       setSearchValue(searchText);
       setCurrentPage(1);
-      loadGroupsMaster(searchText, 1, pageSize);
+      loadTelecoms(searchText, 1, pageSize);
     },
     [pageSize]
   );
@@ -417,7 +474,7 @@ const GroupsMaster: React.FC = () => {
     (field: string, direction: "asc" | "desc" | null) => {
       const newSortConfig = direction ? { field, direction } : null;
       setSortConfig(newSortConfig);
-      loadGroupsMaster(
+      loadTelecoms(
         searchValue,
         currentPage,
         pageSize,
@@ -433,7 +490,7 @@ const GroupsMaster: React.FC = () => {
     (filters: Filter[]) => {
       setActiveFilters(filters);
       setCurrentPage(1);
-      loadGroupsMaster(
+      loadTelecoms(
         searchValue,
         1,
         pageSize,
@@ -452,7 +509,7 @@ const GroupsMaster: React.FC = () => {
       if (pageSize === 0) return;
 
       setCurrentPage(page);
-      loadGroupsMaster(searchValue, page, pageSize);
+      loadTelecoms(searchValue, page, pageSize);
     },
     [searchValue, pageSize]
   );
@@ -465,9 +522,9 @@ const GroupsMaster: React.FC = () => {
 
       if (size === 0) {
         // Handle "All" option - load all data
-        loadGroupsMaster(searchValue, 1, 999999); // Large number to get all records
+        loadTelecoms(searchValue, 1, 999999); // Large number to get all records
       } else {
-        loadGroupsMaster(searchValue, 1, size);
+        loadTelecoms(searchValue, 1, size);
       }
     },
     [searchValue]
@@ -482,64 +539,67 @@ const GroupsMaster: React.FC = () => {
   // Handle row actions
   const handleRowAction = useCallback(
     (action: "view" | "edit" | "delete", rowId: string | number) => {
-      const selectedGroup = groupsMaster.find((group) => group.id === rowId);
+      const selectedTelecom = telecoms.find((telecom) => telecom.id === rowId);
 
       switch (action) {
         case "view":
-          console.log("View group:", selectedGroup);
-          navigate(`${urls.groupsMasterViewPath}/${rowId}`, {
-            state: { groupsMasterData: selectedGroup },
+          console.log("View telecom:", selectedTelecom);
+          navigate(`${urls.telecomViewPath}/${rowId}`, {
+            state: { telecomData: selectedTelecom },
           });
           break;
         case "edit":
-          navigate(`${urls.editGroupsMasterViewPath}/${rowId}`, {
-            state: { groupsMasterData: selectedGroup },
+          navigate(`${urls.editTelecomViewPath}/${rowId}`, {
+            state: { telecomData: selectedTelecom },
           });
           break;
         case "delete":
-          handleDeleteGroup(rowId);
+          handleDeleteTelecom(rowId);
           break;
       }
     },
-    [groupsMaster, navigate]
+    [telecoms, navigate]
   );
 
-  // Handle delete group
-  const handleDeleteGroup = useCallback(
+  // Handle delete telecom
+  const handleDeleteTelecom = useCallback(
     async (id: string | number) => {
-      if (window.confirm("Are you sure you want to inactivate this group?")) {
+      if (window.confirm("Are you sure you want to inactivate this telecom?")) {
         try {
           setLoading(true);
-          const result = await groupsMasterServices.inactivate(id);
+          const result = await telecomServices.inactivate(id);
           toast.success(result.message);
           // Reload current page
-          await loadGroupsMaster();
+          await loadTelecoms();
         } catch (error: any) {
-          console.error("Error inactivating group:", error);
+          console.error("Error inactivating telecom:", error);
           toast.error(error.message);
         } finally {
           setLoading(false);
         }
       }
     },
-    [loadGroupsMaster]
+    [loadTelecoms]
   );
 
-  // Handle add group
-  const handleAddGroup = useCallback(() => {
-    navigate(urls.addGroupsMasterViewPath);
+  // Handle add telecom
+  const handleAddTelecom = useCallback(() => {
+    navigate(urls.addTelecomViewPath);
   }, [navigate]);
 
+  // Handle export
+
+  // Handle export
   const handleExport = async (format: ExportFormat) => {
     try {
       await exportService.exportData(
-        `${urls.groupModuleViewPath}/export`,
+        `${urls.vehicleMastersViewPath}/export`,
         format,
-        "group-master"
+        "vehicle-masters"
       );
 
       toast.success(
-        `Group Master exported successfully as ${format.toUpperCase()}`
+        `Vehicle Master exported successfully as ${format.toUpperCase()}`
       );
     } catch (error: any) {
       console.error("Export failed:", error.message);
@@ -552,7 +612,7 @@ const GroupsMaster: React.FC = () => {
     async (file: File) => {
       try {
         setLoading(true);
-        const result = await groupsMasterServices.import(file);
+        const result = await telecomServices.import(file);
 
         if (result.errors && result.errors.length > 0) {
           toast.error(`Import completed with ${result.errors.length} errors`);
@@ -561,23 +621,23 @@ const GroupsMaster: React.FC = () => {
           toast.success(result.message);
         }
 
-        // Reload groups
-        await loadGroupsMaster();
+        // Reload telecoms
+        await loadTelecoms();
       } catch (error: any) {
-        console.error("Error importing groups:", error);
-        toast.error(error.message || "Failed to import groups");
+        console.error("Error importing telecoms:", error);
+        toast.error(error.message || "Failed to import telecoms");
       } finally {
         setLoading(false);
       }
     },
-    [loadGroupsMaster]
+    [loadTelecoms]
   );
 
   // Handle get filter options
   const handleGetFilterOptions = useCallback(
     async (field: string, searchText?: string): Promise<FilterOption[]> => {
       try {
-        return await groupsMasterServices.getFilterOptions(field, searchText);
+        return await telecomServices.getFilterOptions(field, searchText);
       } catch (error: any) {
         console.error("Error fetching filter options:", error);
         toast.error(error.message || "Failed to fetch filter options");
@@ -588,7 +648,7 @@ const GroupsMaster: React.FC = () => {
   );
 
   return (
-   <div
+    <div
       style={{
         background: "#FFFFFF",
         borderTopLeftRadius: "24px",
@@ -598,7 +658,7 @@ const GroupsMaster: React.FC = () => {
       }}
     >
       <ModuleHeader
-        title={strings.GROUPS_MASTER}
+        title={strings.TELECOM}
         breadcrumbs={breadcrumbs}
         className="rounded-t-[24px]"
         style="px-4"
@@ -623,7 +683,7 @@ const GroupsMaster: React.FC = () => {
       <div className="mt-6">
         <CustomTable
           columns={columns}
-          rows={groupsMaster}
+          rows={telecoms}
           loading={loading}
           height={600}
           pagination={{
@@ -640,7 +700,7 @@ const GroupsMaster: React.FC = () => {
           onRowAction={handleRowAction}
           onExport={handleExport}
           onImport={handleImport}
-          onAdd={handleAddGroup}
+          onAdd={handleAddTelecom}
           onGetFilterOptions={handleGetFilterOptions}
         />
       </div>
@@ -648,4 +708,4 @@ const GroupsMaster: React.FC = () => {
   );
 };
 
-export default GroupsMaster;
+export default Telecom;

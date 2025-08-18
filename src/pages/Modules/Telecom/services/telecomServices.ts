@@ -1,4 +1,4 @@
-// deviceServices.ts - Fixed Implementation with Filter API Integration
+// telecomServices.ts - Implementation with Filter API Integration
 import { Row } from "../../../../components/ui/DataTable/types";
 import {
   getRequest,
@@ -15,22 +15,27 @@ interface ApiResponse<T> {
   data: T;
 }
 
-interface DeviceData {
+interface TelecomData {
   _id: string;
-  deviceId: string;
-  modelName: string;
-  manufacturerName: string;
-  deviceType: string;
-  ipAddress: string;
-  port: number;
+  telecomId?: string;
+  telecomOperator: string;
+  simType: string;
+  numberOfNetworkProfiles: number;
+  networkProfile1?: string;
+  networkProfile2?: string;
+  networkProfile1Generation?: string;
+  networkProfile2Generation?: string;
+  networkProfile1APN?: string;
+  networkProfile2APN?: string;
+  billingType: string;
   status: string;
   createdAt: string;
   updatedAt: string;
   __v: number;
 }
 
-interface DevicesListResponse {
-  data: DeviceData[];
+interface TelecomsListResponse {
+  data: TelecomData[];
   pagination: {
     page: string | number;
     limit: string | number;
@@ -40,14 +45,13 @@ interface DevicesListResponse {
     hasPrev: boolean;
   };
   filterCounts?: {
-    deviceTypes?: Array<{ _id: string; count: number }>;
+    simTypes?: Array<{ _id: string; count: number }>;
+    billingTypes?: Array<{ _id: string; count: number }>;
+    telecomOperators?: Array<{ _id: string; count: number }>;
+    networkProfile1Generations?: Array<{ _id: string; count: number }>;
+    networkProfile2Generations?: Array<{ _id: string; count: number }>;
+    numberOfNetworkProfiles?: Array<{ _id: number; count: number }>;
     statuses?: Array<{ _id: string; count: number }>;
-    manufacturerNames?: Array<{ _id: string; count: number }>;
-    ports?: Array<{ _id: number; count: number }>;
-    modelNames?: Array<{ _id: string; count: number }>;
-    ipAddresses?: Array<{ _id: string; count: number }>;
-    deviceIds?: Array<{ _id: string; count: number }>;
-    usernames?: Array<{ _id: string; count: number }>;
   };
 }
 
@@ -73,7 +77,7 @@ interface PaginatedResponse<T> {
   hasPrev: boolean;
 }
 
-// Date Filter interface
+// Updated Filter interface to support date filters
 interface DateFilter {
   dateField: string;
   dateFilterType: string;
@@ -84,7 +88,6 @@ interface DateFilter {
   isPickAnyDate?: boolean;
 }
 
-// Filter interface - Updated to support date filters
 interface Filter {
   field: string;
   value: any[];
@@ -92,39 +95,62 @@ interface Filter {
   type?: "regular" | "date";
   dateFilter?: DateFilter;
 }
-
 interface FilterSummaryResponse {
-  totalDevices: number;
-  deviceTypes: Array<{
+  totalTelecoms: number;
+  simTypes: Array<{
     count: number;
     value: string;
     label: string;
+  }>;
+  billingTypes: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  telecomOperators: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  networkProfile1Generations: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  networkProfile2Generations: Array<{
+    count: number;
+    value: string;
+    label: string;
+  }>;
+  numberOfNetworkProfiles: Array<{
+    count: number;
+    value: number;
+    label: number;
   }>;
   statuses: Array<{
     count: number;
     value: string;
     label: string;
   }>;
-  manufacturerNames: Array<{
-    count: number;
-    value: string;
-    label: string;
-  }>;
 }
 
-// Transform API device data to Row format
-const transformDeviceToRow = (device: DeviceData): Row => ({
-  deviceId: device.deviceId,
-  id: device._id,
-  modelName: device.modelName,
-  manufacturerName: device.manufacturerName,
-  deviceType: device.deviceType,
-  ipAddress: device.ipAddress,
-  port: device.port,
-  status: device.status,
-  createdAt: device.createdAt,
-  updatedAt: device.updatedAt,
-  username: "admin",
+// Transform API telecom data to Row format
+const transformTelecomToRow = (telecom: TelecomData): Row => ({
+  telecomId: telecom.telecomId || telecom._id,
+  id: telecom._id,
+  telecomOperator: telecom.telecomOperator,
+  simType: telecom.simType,
+  numberOfNetworkProfiles: telecom.numberOfNetworkProfiles,
+  networkProfile1: telecom.networkProfile1 || "",
+  networkProfile2: telecom.networkProfile2 || "",
+  networkProfile1Generation: telecom.networkProfile1Generation || "",
+  networkProfile2Generation: telecom.networkProfile2Generation || "",
+  networkProfile1APN: telecom.networkProfile1APN || "",
+  networkProfile2APN: telecom.networkProfile2APN || "",
+  billingType: telecom.billingType,
+  status: telecom.status,
+  createdAt: telecom.createdAt,
+  updatedAt: telecom.updatedAt,
 });
 
 // Helper function to convert DateRangePicker preset to API format
@@ -221,7 +247,7 @@ const processDateFilters = (filters: Filter[], payload: any) => {
   });
 };
 
-export const deviceServices = {
+export const telecomServices = {
   // Updated getAll method - now uses filter API exclusively
   getAll: async (
     page: number = 1,
@@ -257,26 +283,28 @@ export const deviceServices = {
         // Handle regular filters
         regularFilters.forEach((filter) => {
           switch (filter.field) {
-            case "deviceType":
-              payload.deviceTypes = filter.value;
+            case "simType":
+              payload.simTypes = filter.value;
               break;
-            case "modelName":
-              payload.modelNames = filter.value;
+            case "billingType":
+              payload.billingTypes = filter.value;
               break;
-            case "manufacturerName":
-              payload.manufacturerNames = filter.value;
+            case "telecomOperator":
+              payload.telecomOperators = filter.value;
+              break;
+            case "networkProfile1Generation":
+              payload.networkProfile1Generations = filter.value;
+              break;
+            case "networkProfile2Generation":
+              payload.networkProfile2Generations = filter.value;
+              break;
+            case "numberOfNetworkProfiles":
+              payload.numberOfNetworkProfiles = filter.value.map((v) =>
+                parseInt(v)
+              );
               break;
             case "status":
               payload.statuses = filter.value;
-              break;
-            case "port":
-              payload.ports = filter.value.map((v) => parseInt(v));
-              break;
-            case "ipAddress":
-              payload.ipAddresses = filter.value;
-              break;
-            case "deviceId":
-              payload.deviceIds = filter.value;
               break;
             default:
               payload[`${filter.field}s`] = filter.value;
@@ -289,14 +317,14 @@ export const deviceServices = {
       }
 
       // Always use the filter endpoint
-      const response: ApiResponse<DevicesListResponse> = await postRequest(
-        `${urls.devicesViewPath}/filter`,
+      const response: ApiResponse<TelecomsListResponse> = await postRequest(
+        `${urls.telecomViewPath}/filter`,
         payload
       );
 
       if (response.success) {
         return {
-          data: response.data.data.map(transformDeviceToRow),
+          data: response.data.data.map(transformTelecomToRow),
           total: response.data.pagination.total,
           page:
             typeof response.data.pagination.page === "string"
@@ -311,11 +339,11 @@ export const deviceServices = {
           hasPrev: response.data.pagination.hasPrev,
         };
       } else {
-        throw new Error(response.message || "Failed to fetch devices");
+        throw new Error(response.message || "Failed to fetch telecoms");
       }
     } catch (error: any) {
-      console.error("Error fetching devices:", error.message);
-      throw new Error(error.message || "Failed to fetch devices");
+      console.error("Error fetching telecoms:", error.message);
+      throw new Error(error.message || "Failed to fetch telecoms");
     }
   },
 
@@ -333,7 +361,7 @@ export const deviceServices = {
       }
 
       const response: ApiResponse<FilterOptionsResponse> = await getRequest(
-        `${urls.devicesViewPath}/filter-options`,
+        `${urls.telecomViewPath}/filter-options`,
         params
       );
 
@@ -351,14 +379,13 @@ export const deviceServices = {
   // Helper method to parse filter counts from filter API response
   parseFilterCounts: (filterCounts: any, field: string): FilterOption[] => {
     const fieldMapping: { [key: string]: string } = {
-      deviceType: "deviceTypes",
+      simType: "simTypes",
+      billingType: "billingTypes",
+      telecomOperator: "telecomOperators",
+      networkProfile1Generation: "networkProfile1Generations",
+      networkProfile2Generation: "networkProfile2Generations",
+      numberOfNetworkProfiles: "numberOfNetworkProfiles",
       status: "statuses",
-      manufacturerName: "manufacturerNames",
-      port: "ports",
-      modelName: "modelNames",
-      ipAddress: "ipAddresses",
-      deviceId: "deviceIds",
-      username: "usernames",
     };
 
     const apiField = fieldMapping[field] || `${field}s`;
@@ -371,106 +398,147 @@ export const deviceServices = {
     }));
   },
 
-  // Get device by ID
+  // Get telecom by ID
   getById: async (id: string | number): Promise<Row | null> => {
     try {
-      const response: ApiResponse<DeviceData> = await getRequest(
-        `${urls.devicesViewPath}/${id}`
+      const response: ApiResponse<TelecomData> = await getRequest(
+        `${urls.telecomViewPath}/${id}`
       );
 
       if (response.success) {
-        return transformDeviceToRow(response.data);
+        return transformTelecomToRow(response.data);
       } else {
-        throw new Error(response.message || "Device not found");
+        throw new Error(response.message || "Telecom not found");
       }
     } catch (error: any) {
-      console.error("Error fetching device:", error.message);
+      console.error("Error fetching telecom:", error.message);
       if (
         error.message.includes("not found") ||
         error.message.includes("404")
       ) {
         return null;
       }
-      throw new Error(error.message || "Failed to fetch device");
+      throw new Error(error.message || "Failed to fetch telecom");
     }
   },
 
-  // Create new device
+  // Create new telecom
   create: async (
-    deviceData: Partial<Row>
-  ): Promise<{ device: Row; message: string }> => {
+    telecomData: Partial<Row>
+  ): Promise<{ telecom: Row; message: string }> => {
     try {
-      const payload = {
-        modelName: deviceData.modelName,
-        manufacturerName: deviceData.manufacturerName,
-        deviceType: deviceData.deviceType,
-        ipAddress: deviceData.ipAddress,
-        port: Number(deviceData.port),
-        status: deviceData.status,
+      const payload: any = {
+        telecomOperator: telecomData.telecomOperator,
+        simType: telecomData.simType,
+        numberOfNetworkProfiles: Number(telecomData.numberOfNetworkProfiles),
+        billingType: telecomData.billingType,
+        status: telecomData.status || "active",
       };
 
-      const response: ApiResponse<DeviceData> = await postRequest(
-        urls.devicesViewPath,
+      // Add network profile 1 fields (always required)
+      if (telecomData.networkProfile1) {
+        payload.networkProfile1 = telecomData.networkProfile1;
+      }
+      if (telecomData.networkProfile1Generation) {
+        payload.networkProfile1Generation =
+          telecomData.networkProfile1Generation;
+      }
+      if (telecomData.networkProfile1APN) {
+        payload.networkProfile1APN = telecomData.networkProfile1APN;
+      }
+
+      // Add network profile 2 fields (only if 2 profiles)
+      if (telecomData.numberOfNetworkProfiles === 2) {
+        if (telecomData.networkProfile2) {
+          payload.networkProfile2 = telecomData.networkProfile2;
+        }
+        if (telecomData.networkProfile2Generation) {
+          payload.networkProfile2Generation =
+            telecomData.networkProfile2Generation;
+        }
+        if (telecomData.networkProfile2APN) {
+          payload.networkProfile2APN = telecomData.networkProfile2APN;
+        }
+      }
+
+      const response: ApiResponse<TelecomData> = await postRequest(
+        urls.telecomViewPath,
         payload
       );
 
       if (response.success) {
         return {
-          device: transformDeviceToRow(response.data),
-          message: response.message || "Device created successfully",
+          telecom: transformTelecomToRow(response.data),
+          message: response.message || "Telecom created successfully",
         };
       } else {
-        throw new Error(response.message || "Failed to create device");
+        throw new Error(response.message || "Failed to create telecom");
       }
     } catch (error: any) {
-      console.error("Error creating device:", error.message);
-      throw new Error(error.message || "Failed to create device");
+      console.error("Error creating telecom:", error.message);
+      throw new Error(error.message || "Failed to create telecom");
     }
   },
 
-  // Update device
+  // Update telecom
   update: async (
     id: string | number,
-    deviceData: Partial<Row>
-  ): Promise<{ device: Row; message: string }> => {
+    telecomData: Partial<Row>
+  ): Promise<{ telecom: Row; message: string }> => {
     try {
       const payload: any = {};
 
-      if (deviceData.modelName !== undefined)
-        payload.modelName = deviceData.modelName;
-      if (deviceData.manufacturerName !== undefined)
-        payload.manufacturerName = deviceData.manufacturerName;
-      if (deviceData.deviceType !== undefined)
-        payload.deviceType = deviceData.deviceType;
-      if (deviceData.ipAddress !== undefined)
-        payload.ipAddress = deviceData.ipAddress;
-      if (deviceData.port !== undefined) payload.port = Number(deviceData.port);
-      if (deviceData.status !== undefined) payload.status = deviceData.status;
+      // Only include fields that are provided
+      if (telecomData.telecomOperator !== undefined)
+        payload.telecomOperator = telecomData.telecomOperator;
+      if (telecomData.simType !== undefined)
+        payload.simType = telecomData.simType;
+      if (telecomData.numberOfNetworkProfiles !== undefined)
+        payload.numberOfNetworkProfiles = Number(
+          telecomData.numberOfNetworkProfiles
+        );
+      if (telecomData.networkProfile1 !== undefined)
+        payload.networkProfile1 = telecomData.networkProfile1;
+      if (telecomData.networkProfile2 !== undefined)
+        payload.networkProfile2 = telecomData.networkProfile2;
+      if (telecomData.networkProfile1Generation !== undefined)
+        payload.networkProfile1Generation =
+          telecomData.networkProfile1Generation;
+      if (telecomData.networkProfile2Generation !== undefined)
+        payload.networkProfile2Generation =
+          telecomData.networkProfile2Generation;
+      if (telecomData.networkProfile1APN !== undefined)
+        payload.networkProfile1APN = telecomData.networkProfile1APN;
+      if (telecomData.networkProfile2APN !== undefined)
+        payload.networkProfile2APN = telecomData.networkProfile2APN;
+      if (telecomData.billingType !== undefined)
+        payload.billingType = telecomData.billingType;
+      if (telecomData.status !== undefined) payload.status = telecomData.status;
 
-      const response: ApiResponse<DeviceData> = await patchRequest(
-        `${urls.devicesViewPath}/${id}`,
+      const response: ApiResponse<TelecomData> = await patchRequest(
+        `${urls.telecomViewPath}/${id}`,
         payload
       );
 
       if (response.success) {
         return {
-          device: transformDeviceToRow(response.data),
-          message: response.message || "Device updated successfully",
+          telecom: transformTelecomToRow(response.data),
+          message: response.message || "Telecom updated successfully",
         };
       } else {
-        throw new Error(response.message || "Failed to update device");
+        throw new Error(response.message || "Failed to update telecom");
       }
     } catch (error: any) {
-      console.error("Error updating device:", error.message);
-      throw new Error(error.message || "Failed to update device");
+      console.error("Error updating telecom:", error.message);
+      throw new Error(error.message || "Failed to update telecom");
     }
   },
 
-  // Inactivate device (soft delete)
+  // Inactivate telecom (soft delete)
   inactivate: async (id: string | number): Promise<{ message: string }> => {
     try {
       const response: ApiResponse<any> = await patchRequest(
-        `${urls.devicesViewPath}/${id}`,
+        `${urls.telecomViewPath}/${id}`,
         {
           status: "inactive",
         }
@@ -478,21 +546,21 @@ export const deviceServices = {
 
       if (response.success) {
         return {
-          message: response.message || "Device inactivated successfully",
+          message: response.message || "Telecom inactivated successfully",
         };
       } else {
-        throw new Error(response.message || "Failed to inactivate device");
+        throw new Error(response.message || "Failed to inactivate telecom");
       }
     } catch (error: any) {
-      console.error("Error inactivating device:", error.message);
-      throw new Error(error.message || "Failed to inactivate device");
+      console.error("Error inactivating telecom:", error.message);
+      throw new Error(error.message || "Failed to inactivate telecom");
     }
   },
 
-  // Export devices - Updated to work with filters
+  // Export telecoms - Updated to work with filters
   export: async (filters?: Filter[]): Promise<Blob> => {
     try {
-      let url = `${urls.devicesViewPath}/export`;
+      let url = `${urls.telecomViewPath}/export`;
       let requestOptions: RequestInit = {
         method: "GET",
         headers: {
@@ -506,29 +574,28 @@ export const deviceServices = {
 
         filters.forEach((filter) => {
           switch (filter.field) {
-            case "deviceType":
-              payload.deviceTypes = filter.value;
+            case "simType":
+              payload.simTypes = filter.value;
               break;
-            case "modelName":
-              payload.modelNames = filter.value;
+            case "billingType":
+              payload.billingTypes = filter.value;
               break;
-            case "manufacturerName":
-              payload.manufacturerNames = filter.value;
+            case "telecomOperator":
+              payload.telecomOperators = filter.value;
+              break;
+            case "networkProfile1Generation":
+              payload.networkProfile1Generations = filter.value;
+              break;
+            case "networkProfile2Generation":
+              payload.networkProfile2Generations = filter.value;
+              break;
+            case "numberOfNetworkProfiles":
+              payload.numberOfNetworkProfiles = filter.value.map((v) =>
+                parseInt(v)
+              );
               break;
             case "status":
-              payload.status = filter.value;
-              break;
-            case "port":
-              payload.ports = filter.value.map((v) => parseInt(v));
-              break;
-            case "ipAddress":
-              payload.ipAddresses = filter.value;
-              break;
-            case "deviceId":
-              payload.deviceIds = filter.value;
-              break;
-            case "username":
-              payload.usernames = filter.value;
+              payload.statuses = filter.value;
               break;
             default:
               payload[`${filter.field}s`] = filter.value;
@@ -544,7 +611,7 @@ export const deviceServices = {
           body: JSON.stringify(payload),
         };
 
-        url = `${urls.devicesViewPath}/export-filtered`;
+        url = `${urls.telecomViewPath}/export-filtered`;
       }
 
       const response = await fetch(url, requestOptions);
@@ -555,18 +622,18 @@ export const deviceServices = {
 
       return await response.blob();
     } catch (error: any) {
-      console.error("Error exporting devices:", error.message);
-      throw new Error(error.message || "Failed to export devices");
+      console.error("Error exporting telecoms:", error.message);
+      throw new Error(error.message || "Failed to export telecoms");
     }
   },
 
-  // Import devices
+  // Import telecoms
   import: async (file: File): Promise<{ message: string; errors?: any[] }> => {
     try {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`${urls.devicesViewPath}/import`, {
+      const response = await fetch(`${urls.telecomViewPath}/import`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -578,21 +645,23 @@ export const deviceServices = {
 
       if (result.success) {
         return {
-          message: result.message || "Devices imported successfully",
+          message: result.message || "Telecoms imported successfully",
           errors: result.errors || [],
         };
       } else {
-        throw new Error(result.message || "Failed to import devices");
+        throw new Error(result.message || "Failed to import telecoms");
       }
     } catch (error: any) {
-      console.error("Error importing devices:", error.message);
-      throw new Error(error.message || "Failed to import devices");
+      console.error("Error importing telecoms:", error.message);
+      throw new Error(error.message || "Failed to import telecoms");
     }
   },
+
+  // Get filter summary for dashboard
   getFilterSummary: async (): Promise<FilterSummaryResponse> => {
     try {
       const response: ApiResponse<FilterSummaryResponse> = await getRequest(
-        `${urls.devicesViewPath}/filter-summary`
+        `${urls.telecomViewPath}/filter-summary`
       );
 
       if (response.success) {
@@ -604,5 +673,15 @@ export const deviceServices = {
       console.error("Error fetching filter summary:", error.message);
       throw new Error(error.message || "Failed to fetch filter summary");
     }
+  },
+
+  // Legacy search method for backwards compatibility
+  search: async (
+    searchText: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<PaginatedResponse<Row>> => {
+    // Use the new getAll method with search parameter
+    return telecomServices.getAll(page, limit, searchText);
   },
 };

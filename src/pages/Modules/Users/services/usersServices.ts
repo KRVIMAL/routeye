@@ -4,7 +4,6 @@ import {
   getRequest,
   postRequest,
   patchRequest,
-  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 import { store } from "../../../../store";
@@ -88,11 +87,25 @@ interface PaginatedResponse<T> {
   hasPrev: boolean;
 }
 
-// Filter interface
+
+// Date Filter interface
+interface DateFilter {
+  dateField: string;
+  dateFilterType: string;
+  fromDate?: string;
+  toDate?: string;
+  customValue?: number;
+  selectedDates?: Date[];
+  isPickAnyDate?: boolean;
+}
+
+// Filter interface - Updated to support date filters
 interface Filter {
   field: string;
   value: any[];
   label?: string;
+  type?: "regular" | "date";
+  dateFilter?: DateFilter;
 }
 
 interface FilterSummaryResponse {
@@ -178,9 +191,9 @@ const transformUserToRow = (user: UserData): Row => ({
   contactNo: user.contactNo,
   userRole: "User", // This will be populated from role API
   status: user.status,
-  createdTime: user.createdAt,
-  updatedTime: user.updatedAt,
-  inactiveTime: user.updatedAt,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+  inactive: user.updatedAt,
   // Store IDs for edit functionality
   accountId: user.accountId,
   groupId: user.groupId,
@@ -211,6 +224,96 @@ const flattenAccountHierarchy = (
   return result;
 };
 
+// Helper function to convert DateRangePicker preset to API format
+const convertDateFilterTypeToAPI = (dateFilterType: string): string => {
+  const mapping: { [key: string]: string } = {
+    "customised": "custom_range",
+    "today": "today",
+    "yesterday": "yesterday",
+    "this-week": "this_week",
+    "this-month": "this_month",
+    "this-year": "this_year",
+    "last-x-days": "last_x_days",
+    "last-x-weeks": "last_x_weeks",
+    "last-x-months": "last_x_months",
+    "last-x-years": "last_x_years",
+    "last-x-hours": "last_x_hours",
+    "last-x-minutes": "last_x_minutes",
+    "pick-any-date": "custom_range", // Handle as custom range for now
+  };
+
+  return mapping[dateFilterType] || dateFilterType;
+};
+
+// Helper function to format date without timezone conversion
+const formatDateForAPI = (date: Date): string => {
+  // Format date as YYYY-MM-DDTHH:mm:ss.sssZ without timezone conversion
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}Z`;
+};
+
+// Helper function to process date filters for API
+const processDateFilters = (filters: Filter[], payload: any) => {
+  const dateFilters = filters.filter(f => f.type === "date" && f.dateFilter);
+  
+  dateFilters.forEach(filter => {
+    const dateFilter = filter.dateFilter!;
+    const apiField = dateFilter.dateField;
+    
+    // Set the date field (e.g., "createdAt", "updatedAt")
+    payload.dateField = apiField;
+    
+    // Convert the filter type to API format
+    payload.dateFilterType = convertDateFilterTypeToAPI(dateFilter.dateFilterType);
+    
+    // Handle different date filter types
+    switch (payload.dateFilterType) {
+      case "custom_range":
+        if (dateFilter.fromDate && dateFilter.toDate) {
+          // Use our custom formatter to avoid timezone conversion
+          const fromDate = new Date(dateFilter.fromDate);
+          const toDate = new Date(dateFilter.toDate);
+          
+          payload.fromDate = formatDateForAPI(fromDate);
+          payload.toDate = formatDateForAPI(toDate);
+        }
+        break;
+        
+      case "last_x_days":
+      case "last_x_weeks":
+      case "last_x_months":
+      case "last_x_years":
+      case "last_x_hours":
+      case "last_x_minutes":
+        if (dateFilter.customValue) {
+          payload.customValue = dateFilter.customValue;
+        }
+        break;
+        
+      case "pick_any_date":
+        // For pick any date, we'll use custom range with the selected dates
+        if (dateFilter.selectedDates && dateFilter.selectedDates.length > 0) {
+          const sortedDates = [...dateFilter.selectedDates].sort();
+          payload.dateFilterType = "custom_range";
+          payload.fromDate = formatDateForAPI(sortedDates[0]);
+          payload.toDate = formatDateForAPI(sortedDates[sortedDates.length - 1]);
+        }
+        break;
+        
+      // For preset filters like "today", "yesterday", etc., no additional params needed
+      default:
+        break;
+    }
+  });
+};
+
 export const userServices = {
   // Updated getAll method - now uses filter API exclusively
   getAll: async (
@@ -238,9 +341,14 @@ export const userServices = {
         payload.sortOrder = sortDirection;
       }
 
-      // Transform filters to the API format
+      // Process filters
       if (filters && filters.length > 0) {
-        filters.forEach((filter) => {
+        // Separate regular filters and date filters
+        const regularFilters = filters.filter(f => f.type !== "date");
+        const dateFilters = filters.filter(f => f.type === "date");
+        
+        // Handle regular filters
+        regularFilters.forEach((filter) => {
           switch (filter.field) {
             case "status":
               payload.statuses = filter.value;
@@ -274,6 +382,10 @@ export const userServices = {
               payload[`${filter.field}s`] = filter.value;
           }
         });
+            // Handle date filters
+        if (dateFilters.length > 0) {
+          processDateFilters(dateFilters, payload);
+        }
       }
 
       // Always use the filter endpoint
@@ -456,7 +568,7 @@ export const userServices = {
         payload.accountId = null;
       }
 
-      const response: ApiResponse<UserData> = await putRequest(
+      const response: ApiResponse<UserData> = await patchRequest(
         `${urls.usersViewPath}/${id}`,
         payload
       );

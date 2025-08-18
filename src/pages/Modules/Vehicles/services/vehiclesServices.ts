@@ -4,7 +4,6 @@ import {
   getRequest,
   postRequest,
   patchRequest,
-  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 
@@ -321,7 +320,7 @@ export const vehicleServices = {
       if (vehicleData.icon !== undefined) payload.icon = vehicleData.icon;
       if (vehicleData.status !== undefined) payload.status = vehicleData.status;
 
-      const response: ApiResponse<VehicleData> = await putRequest(
+      const response: ApiResponse<VehicleData> = await patchRequest(
         `${urls.vehiclesViewPath}/${id}`,
         payload
       );

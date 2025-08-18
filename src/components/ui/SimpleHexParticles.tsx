@@ -66,8 +66,8 @@ export const SimpleHexParticles: React.FC<SimpleHexParticlesProps> = ({
     <Particles
       id={id}
       className={`absolute inset-0 ${className}`}
-      init={particlesInit}
-      loaded={particlesLoaded}
+      // init={particlesInit}
+      // loaded={particlesLoaded}
       options={particlesConfig}
     />
   );

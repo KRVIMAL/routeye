@@ -4,7 +4,6 @@ import {
   getRequest,
   postRequest,
   patchRequest,
-  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 import { store } from "../../../../store";
@@ -107,11 +106,24 @@ interface PaginatedResponse<T> {
   hasPrev: boolean;
 }
 
-// Filter interface
+// Date Filter interface
+interface DateFilter {
+  dateField: string;
+  dateFilterType: string;
+  fromDate?: string;
+  toDate?: string;
+  customValue?: number;
+  selectedDates?: Date[];
+  isPickAnyDate?: boolean;
+}
+
+// Filter interface - Updated to support date filters
 interface Filter {
   field: string;
   value: any[];
   label?: string;
+  type?: "regular" | "date";
+  dateFilter?: DateFilter;
 }
 
 interface FilterSummaryResponse {
@@ -152,9 +164,9 @@ export interface Client {
 
 // Helper function to get logged-in user account ID
 const getLoggedInAccountId = (): string => {
-   const stateData = localStorage.getItem("routeye-state");
-    const data = JSON.parse(stateData!);
-    // const state = data?.auth;
+  const stateData = localStorage.getItem("routeye-state");
+  const data = JSON.parse(stateData!);
+  // const state = data?.auth;
   const accountId = data?.auth?.user?.account?._id;
   if (!accountId) {
     throw new Error("User account ID not found. Please log in again.");
@@ -163,14 +175,21 @@ const getLoggedInAccountId = (): string => {
 };
 
 // Transform API account data to Row format
-const transformAccountToRow = (account: any, parentAccountsMap?: Map<string, string>): Row => {
+const transformAccountToRow = (
+  account: any,
+  parentAccountsMap?: Map<string, string>
+): Row => {
   // Determine parent account name
   let parentAccountName = "Root Account";
   if (account.parentAccount) {
-    if (typeof account.parentAccount === 'string') {
+    if (typeof account.parentAccount === "string") {
       // If parentAccount is just an ID, try to get name from map
-      parentAccountName = parentAccountsMap?.get(account.parentAccount) || "Parent Account";
-    } else if (typeof account.parentAccount === 'object' && account.parentAccount?.accountName) {
+      parentAccountName =
+        parentAccountsMap?.get(account.parentAccount) || "Parent Account";
+    } else if (
+      typeof account.parentAccount === "object" &&
+      account.parentAccount?.accountName
+    ) {
       // If parentAccount is an object with accountName
       parentAccountName = account.parentAccount?.accountName;
     }
@@ -194,15 +213,108 @@ const transformAccountToRow = (account: any, parentAccountsMap?: Map<string, str
     remark: account.client?.remark || "N/A",
     childrenCount: account.childrenCount || 0,
     status: account.status,
-    createdTime: account.createdAt,
-    updatedTime: account.updatedAt,
-    inactiveTime: account.updatedAt,
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
     // Store additional data for edit functionality
     parentAccount: account.parentAccount,
     clientId: account.client?._id || "",
     depth: account.depth || 0,
     isRoot: account.isRoot || false,
   };
+};
+
+// Helper function to convert DateRangePicker preset to API format
+const convertDateFilterTypeToAPI = (dateFilterType: string): string => {
+  const mapping: { [key: string]: string } = {
+    customised: "custom_range",
+    today: "today",
+    yesterday: "yesterday",
+    "this-week": "this_week",
+    "this-month": "this_month",
+    "this-year": "this_year",
+    "last-x-days": "last_x_days",
+    "last-x-weeks": "last_x_weeks",
+    "last-x-months": "last_x_months",
+    "last-x-years": "last_x_years",
+    "last-x-hours": "last_x_hours",
+    "last-x-minutes": "last_x_minutes",
+    "pick-any-date": "custom_range", // Handle as custom range for now
+  };
+
+  return mapping[dateFilterType] || dateFilterType;
+};
+
+// Helper function to format date without timezone conversion
+const formatDateForAPI = (date: Date): string => {
+  // Format date as YYYY-MM-DDTHH:mm:ss.sssZ without timezone conversion
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}Z`;
+};
+
+// Helper function to process date filters for API
+const processDateFilters = (filters: Filter[], payload: any) => {
+  const dateFilters = filters.filter((f) => f.type === "date" && f.dateFilter);
+
+  dateFilters.forEach((filter) => {
+    const dateFilter = filter.dateFilter!;
+    const apiField = dateFilter.dateField;
+
+    // Set the date field (e.g., "createdAt", "updatedAt")
+    payload.dateField = apiField;
+
+    // Convert the filter type to API format
+    payload.dateFilterType = convertDateFilterTypeToAPI(
+      dateFilter.dateFilterType
+    );
+
+    // Handle different date filter types
+    switch (payload.dateFilterType) {
+      case "custom_range":
+        if (dateFilter.fromDate && dateFilter.toDate) {
+          // Use our custom formatter to avoid timezone conversion
+          const fromDate = new Date(dateFilter.fromDate);
+          const toDate = new Date(dateFilter.toDate);
+
+          payload.fromDate = formatDateForAPI(fromDate);
+          payload.toDate = formatDateForAPI(toDate);
+        }
+        break;
+
+      case "last_x_days":
+      case "last_x_weeks":
+      case "last_x_months":
+      case "last_x_years":
+      case "last_x_hours":
+      case "last_x_minutes":
+        if (dateFilter.customValue) {
+          payload.customValue = dateFilter.customValue;
+        }
+        break;
+
+      case "pick_any_date":
+        // For pick any date, we'll use custom range with the selected dates
+        if (dateFilter.selectedDates && dateFilter.selectedDates.length > 0) {
+          const sortedDates = [...dateFilter.selectedDates].sort();
+          payload.dateFilterType = "custom_range";
+          payload.fromDate = formatDateForAPI(sortedDates[0]);
+          payload.toDate = formatDateForAPI(
+            sortedDates[sortedDates.length - 1]
+          );
+        }
+        break;
+
+      // For preset filters like "today", "yesterday", etc., no additional params needed
+      default:
+        break;
+    }
+  });
 };
 
 export const accountServices = {
@@ -226,12 +338,14 @@ export const accountServices = {
       if (response.success) {
         // Create a map of account IDs to account names for parent resolution
         const accountsMap = new Map<string, string>();
-        response.data.accounts.forEach(account => {
+        response.data.accounts.forEach((account) => {
           accountsMap.set(account._id, account.accountName);
         });
 
         return {
-          data: response.data.accounts.map(account => transformAccountToRow(account, accountsMap)),
+          data: response.data.accounts.map((account) =>
+            transformAccountToRow(account, accountsMap)
+          ),
           total: response.data.pagination.totalRecords,
           page: response.data.pagination.currentPage,
           limit: response.data.pagination.limit,
@@ -273,12 +387,14 @@ export const accountServices = {
       if (response.success) {
         // Create a map of account IDs to account names for parent resolution
         const accountsMap = new Map<string, string>();
-        response.data.accounts.forEach(account => {
+        response.data.accounts.forEach((account) => {
           accountsMap.set(account._id, account.accountName);
         });
 
         return {
-          data: response.data.accounts.map(account => transformAccountToRow(account, accountsMap)),
+          data: response.data.accounts.map((account) =>
+            transformAccountToRow(account, accountsMap)
+          ),
           total: response.data.pagination.totalRecords,
           page: response.data.pagination.currentPage,
           limit: response.data.pagination.limit,
@@ -314,10 +430,14 @@ export const accountServices = {
         payload.sortBy = sortField;
         payload.sortOrder = sortDirection;
       }
-
-      // Transform filters to the API format
+      // Process filters
       if (filters && filters.length > 0) {
-        filters.forEach((filter) => {
+        // Separate regular filters and date filters
+        const regularFilters = filters.filter((f) => f.type !== "date");
+        const dateFilters = filters.filter((f) => f.type === "date");
+
+        // Handle regular filters
+        regularFilters.forEach((filter) => {
           switch (filter.field) {
             case "status":
               payload.statuses = filter.value;
@@ -335,6 +455,10 @@ export const accountServices = {
               payload[`${filter.field}s`] = filter.value;
           }
         });
+        // Handle date filters
+        if (dateFilters.length > 0) {
+          processDateFilters(dateFilters, payload);
+        }
       }
 
       const response: ApiResponse<AccountsFilterResponse> = await postRequest(
@@ -345,12 +469,14 @@ export const accountServices = {
       if (response.success) {
         // Create a map for accounts if needed (filter response might not have full hierarchy)
         const accountsMap = new Map<string, string>();
-        response.data.data.forEach(account => {
+        response.data.data.forEach((account) => {
           accountsMap.set(account._id, account.accountName);
         });
 
         return {
-          data: response.data.data.map(account => transformAccountToRow(account, accountsMap)),
+          data: response.data.data.map((account) =>
+            transformAccountToRow(account, accountsMap)
+          ),
           total: response.data.pagination.total,
           page: response.data.pagination.page,
           limit: response.data.pagination.limit,
@@ -488,7 +614,7 @@ export const accountServices = {
         payload.clientId = accountData.clientId;
       if (accountData.status !== undefined) payload.status = accountData.status;
 
-      const response: ApiResponse<AccountData> = await putRequest(
+      const response: ApiResponse<AccountData> = await patchRequest(
         `${urls.accountsViewPath}/${id}`,
         payload
       );

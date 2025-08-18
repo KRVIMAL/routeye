@@ -8,7 +8,7 @@ import { useTheme } from '../../hooks/useTheme';
 
 interface HexagonParticlesProps {
   className?: string;
-  id?: string;
+  id?: string|any;
   variant?: 'network' | 'trail' | 'floating';
 }
 
@@ -58,7 +58,7 @@ export const HexagonParticles: React.FC<HexagonParticlesProps> = ({
     };
   }, [id, variant, mode]);
 
-  const getConfig = () => {
+  const getConfig :any= () => {
     const baseColor = mode === 'dark' ? '#4285F4' : '#2463EB';
     
     switch (variant) {

@@ -475,6 +475,7 @@ const AddEditVehicleMasterForm: React.FC = () => {
                     options={vehicleModuleOptions}
                     value={formData.vehicleModule.value}
                     onChange={handleSelectChange("vehicleModule")}
+                    onBlur={handleBlur('vehicleModule')}
                     placeholder="Select Vehicle Model"
                     required
                     disabled={saving || loadingDropdowns}
@@ -488,6 +489,7 @@ const AddEditVehicleMasterForm: React.FC = () => {
                     options={driverModuleOptions}
                     value={formData.driverModule.value}
                     onChange={handleSelectChange("driverModule")}
+                      onBlur={handleBlur('driverModule')}
                     placeholder="Select Driver (Name - Aadhar No)"
                     required
                     disabled={saving || loadingDropdowns}
@@ -502,6 +504,7 @@ const AddEditVehicleMasterForm: React.FC = () => {
                       options={statusOptions}
                       value={formData.status.value}
                       onChange={handleSelectChange("status")}
+                        onBlur={handleBlur('status')}
                       placeholder="Select Status"
                       required
                       disabled={saving || loadingDropdowns}

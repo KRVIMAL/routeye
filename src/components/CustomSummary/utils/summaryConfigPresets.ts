@@ -56,9 +56,6 @@ export const VEHICLES_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     tablet: 2,
     desktop: 4,
   },
-  containerStyle: {
-    padding: "0 12px",
-  },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
   },
@@ -86,9 +83,6 @@ export const DRIVERS_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     mobile: 1,
     tablet: 3,
     desktop: 4,
-  },
-  containerStyle: {
-    padding: "0 12px",
   },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
@@ -118,9 +112,6 @@ export const CLIENTS_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     tablet: 2,
     desktop: 4,
   },
-  containerStyle: {
-    padding: "0 12px",
-  },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
   },
@@ -148,9 +139,6 @@ export const GROUPS_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     mobile: 1,
     tablet: 2,
     desktop: 4,
-  },
-  containerStyle: {
-    padding: "0 12px",
   },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
@@ -180,9 +168,6 @@ export const VEHICLE_MASTERS_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     tablet: 2,
     desktop: 4,
   },
-  containerStyle: {
-    padding: "0 12px",
-  },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
   },
@@ -210,9 +195,6 @@ export const GROUPS_MASTER_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     mobile: 1,
     tablet: 2,
     desktop: 4, // More cards since we have more data types
-  },
-  containerStyle: {
-    padding: "0 12px",
   },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
@@ -242,9 +224,6 @@ export const USERS_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     tablet: 2,
     desktop: 4,
   },
-  containerStyle: {
-    padding: "0 12px",
-  },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
   },
@@ -272,9 +251,6 @@ export const DEVICE_ONBOARDING_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     mobile: 1,
     tablet: 2,
     desktop: 4,
-  },
-  containerStyle: {
-    padding: "0 12px",
   },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
@@ -304,8 +280,61 @@ export const ACCOUNTS_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
     tablet: 2,
     desktop: 4,
   },
-  containerStyle: {
-    padding: "0 12px",
+  cardStyle: {
+    boxShadow: "0px 0px 4px 0px #00000040",
+  },
+  headerStyle: {
+    marginBottom: "16px",
+  },
+};
+
+/**
+ * Roles module configuration preset
+ */
+export const ROLES_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
+  ...BASE_CONFIG,
+  title: "Roles Summary",
+  titleColor: "#1F3A8A",
+  titleStyle: {
+    fontFamily: "Work Sans",
+    fontWeight: 700,
+    fontSize: "16px",
+    lineHeight: "100%",
+    letterSpacing: "0.03em",
+    textTransform: "capitalize",
+  },
+  cardsPerView: {
+    mobile: 1,
+    tablet: 2,
+    desktop: 4,
+  },
+  cardStyle: {
+    boxShadow: "0px 0px 4px 0px #00000040",
+  },
+  headerStyle: {
+    marginBottom: "16px",
+  },
+};
+
+/**
+ * Telecoms module configuration preset
+ */
+export const TELECOMS_CONFIG_PRESET: Partial<CustomSummaryConfig> = {
+  ...BASE_CONFIG,
+  title: "Telecoms Summary",
+  titleColor: "#1F3A8A",
+  titleStyle: {
+    fontFamily: "Work Sans",
+    fontWeight: 700,
+    fontSize: "16px",
+    lineHeight: "100%",
+    letterSpacing: "0.03em",
+    textTransform: "capitalize",
+  },
+  cardsPerView: {
+    mobile: 1,
+    tablet: 2,
+    desktop: 4,
   },
   cardStyle: {
     boxShadow: "0px 0px 4px 0px #00000040",
@@ -446,7 +475,9 @@ export const getConfigPreset = (
     | "drivers"
     | "clients"
     | "groups"
+    | "roles"
     | "users"
+    | "telecoms"
     | "vehicleMasters"
     | "groups-master"
     | "device-onboarding"
@@ -469,7 +500,8 @@ export const getConfigPreset = (
     users: USERS_CONFIG_PRESET,
     "device-onboarding": DEVICE_ONBOARDING_CONFIG_PRESET,
     accounts: ACCOUNTS_CONFIG_PRESET,
-
+    telecoms: TELECOMS_CONFIG_PRESET,
+    roles: ROLES_CONFIG_PRESET,
     compact: COMPACT_CONFIG_PRESET,
     large: LARGE_CONFIG_PRESET,
     mobile: MOBILE_FIRST_CONFIG_PRESET,

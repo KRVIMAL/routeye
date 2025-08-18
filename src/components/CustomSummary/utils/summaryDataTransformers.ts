@@ -177,7 +177,56 @@ drivers: {
   'level_4': '#60A5FA', // Level 4 - even lighter
   'level_5': '#93C5FD', // Level 5 - lightest blue
   'default': ['#1E40AF', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#DC2626', '#059669', '#7C2D12']
-}
+},
+roles: {
+  'active': '#1E764E',
+  'inactive': '#B00020',
+  'pending': '#F59E0B',
+  'suspended': '#9333EA',
+  // Module colors
+  'user': '#2563EB',
+  'device': '#DC2626',
+  'vehicle': '#059669',
+  'driver': '#7C2D12',
+  'client': '#D97706',
+  'roles': '#6366F1',
+  'groups': '#EC4899',
+  'dashboard': '#10B981',
+  'account': '#8B5CF6',
+  'product': '#F59E0B',
+  'order': '#EF4444',
+  'report': '#06B6D4',
+  // Permission colors
+  'view': '#22C55E',
+  'add': '#3B82F6',
+  'update': '#F59E0B',
+  'delete': '#EF4444',
+  'export': '#8B5CF6',
+  'import': '#06B6D4',
+  // System role colors
+  'true': '#DC2626',   // System roles (red)
+  'false': '#2563EB',  // Custom roles (blue)
+  'default': ['#2563EB', '#DC2626', '#059669', '#7C2D12', '#D97706', '#6366F1', '#EC4899', '#10B981', '#8B5CF6', '#F59E0B']
+},
+telecoms: {
+    'esim': '#2563EB',
+    'plastic': '#059669',
+    'postpaid': '#1E764E',
+    'prepaid': '#F59E0B',
+    'active': '#1E764E',
+    'inactive': '#B00020',
+    '2g': '#F59E0B',
+    '3g': '#2563EB',
+    '4g': '#059669',
+    '5g': '#9333EA',
+    // Operator colors
+    'airtel': '#DC2626',
+    'jio': '#2563EB',
+    'vodafone': '#DC2626',
+    'bsnl': '#059669',
+    'idea': '#F59E0B',
+    'default': ['#2563EB', '#DC2626', '#059669', '#F59E0B', '#9333EA', '#6366F1', '#EC4899', '#10B981']
+  }
 } as const;
 
 
@@ -1234,6 +1283,257 @@ export const transformAccountsData = (
       'Inactive Accounts',
       inactiveAccounts,
       icons.inactiveIcon || React.createElement('div', { children: '🏢' }),
+      '#B00020'
+    ));
+  }
+
+  return cards;
+};
+
+/**
+ * Transform Roles API data to SummaryCard[]
+ */
+export const transformRolesData = (
+  data: {
+    totalRoles: number;
+    statuses?: Array<{ count: number; value: string; label: string }>;
+    modules?: Array<{ count: number; value: string; label: string }>;
+    permissions?: Array<{ count: number; value: string; label: string }>;
+    isSystemValues?: Array<{ count: number; value: boolean; label: string }>;
+  },
+  icons: {
+    totalIcon?: React.ReactNode;
+    inactiveIcon?: React.ReactNode;
+  } = {}
+): SummaryCard[] => {
+  const cards: SummaryCard[] = [];
+  const colorScheme = COLOR_SCHEMES.roles;
+
+  // Total Roles Count
+  cards.push(createCountCard(
+    'total-roles',
+    'Total Roles',
+    data.totalRoles,
+    icons.totalIcon || React.createElement('div', { children: '🛡️' }),
+    '#1E764E'
+  ));
+
+  // Status Chart
+  if (data.statuses && data.statuses.length > 0) {
+    cards.push(createChartCard(
+      'role-statuses',
+      'Role Status',
+      data.statuses,
+      colorScheme,
+      `${data.statuses.length} statuses`
+    ));
+  }
+
+  // Top Modules Chart
+  if (data.modules && data.modules.length > 0) {
+    const topModules = data.modules.slice(0, 8); // Show top 8 modules
+    cards.push(createChartCard(
+      'role-modules',
+      'Top Modules',
+      topModules,
+      colorScheme,
+      `${data.modules.length} modules`
+    ));
+  }
+
+  // Permissions Chart
+  if (data.permissions && data.permissions.length > 0) {
+    cards.push(createChartCard(
+      'role-permissions',
+      'Permissions',
+      data.permissions,
+      colorScheme,
+      `${data.permissions.length} permissions`
+    ));
+  }
+
+  // System vs Custom Roles Chart
+  if (data.isSystemValues && data.isSystemValues.length > 0) {
+    // Transform boolean values to more readable labels
+    const systemRolesData = data.isSystemValues.map(item => ({
+      count: item.count,
+      value: item.value.toString(),
+      label: item.value ? 'System Roles' : 'Custom Roles',
+    }));
+
+    cards.push(createChartCard(
+      'system-roles',
+      'Role Types',
+      systemRolesData,
+      colorScheme,
+      'System vs Custom'
+    ));
+  }
+
+  // Inactive Roles Count
+  const inactiveRoles = data.statuses?.find(s => s.value === 'inactive')?.count || 0;
+  if (inactiveRoles > 0) {
+    cards.push(createCountCard(
+      'inactive-roles',
+      'Inactive Roles',
+      inactiveRoles,
+      icons.inactiveIcon || React.createElement('div', { children: '🚫' }),
+      '#B00020'
+    ));
+  }
+
+  // System Roles Count (if available)
+  const systemRoles = data.isSystemValues?.find(s => s.value === true)?.count || 0;
+  if (systemRoles > 0) {
+    cards.push(createCountCard(
+      'system-roles-count',
+      'System Roles',
+      systemRoles,
+      React.createElement('div', { children: '⚙️' }),
+      '#DC2626'
+    ));
+  }
+
+  return cards;
+};
+
+/**
+ * Transform Telecoms API data to SummaryCard[]
+ */
+export const transformTelecomsData = (
+  data: {
+    totalTelecoms: number;
+    simTypes?: Array<{ count: number; value: string; label: string }>;
+    billingTypes?: Array<{ count: number; value: string; label: string }>;
+    telecomOperators?: Array<{ count: number; value: string; label: string }>;
+    networkProfile1Generations?: Array<{ count: number; value: string; label: string }>;
+    networkProfile2Generations?: Array<{ count: number; value: string; label: string }>;
+    numberOfNetworkProfiles?: Array<{ count: number; value: number; label: number }>;
+    statuses?: Array<{ count: number; value: string; label: string }>;
+  },
+  icons: {
+    totalIcon?: React.ReactNode;
+    inactiveIcon?: React.ReactNode;
+  } = {}
+): SummaryCard[] => {
+  const cards: SummaryCard[] = [];
+  const colorScheme = COLOR_SCHEMES.telecoms;
+
+  // Total Telecoms Count
+  cards.push(createCountCard(
+    'total-telecoms',
+    'Total Telecoms',
+    data.totalTelecoms,
+    icons.totalIcon || React.createElement('div', { children: '📱' }),
+    '#1E764E'
+  ));
+
+  // SIM Types Chart
+  if (data.simTypes?.length) {
+    cards.push(createChartCard(
+      'sim-types',
+      'SIM Types',
+      data.simTypes,
+      colorScheme,
+      `${data.simTypes.length} types`
+    ));
+  }
+
+  // Billing Types Chart
+  if (data.billingTypes?.length) {
+    cards.push(createChartCard(
+      'billing-types',
+      'Billing Types',
+      data.billingTypes,
+      colorScheme,
+      `${data.billingTypes.length} types`
+    ));
+  }
+
+  // Telecom Operators Chart
+  if (data.telecomOperators?.length) {
+    const topOperators = data.telecomOperators.slice(0, 8); // Show top 8 operators
+    cards.push(createChartCard(
+      'telecom-operators',
+      'Operators',
+      topOperators,
+      colorScheme,
+      `${data.telecomOperators.length} operators`
+    ));
+  }
+
+  // Network Generations Chart (combining both profile 1 and profile 2)
+  if (data.networkProfile1Generations?.length || data.networkProfile2Generations?.length) {
+    // Combine and deduplicate network generations
+    const generationsMap = new Map();
+    
+    // Add profile 1 generations
+    data.networkProfile1Generations?.forEach(gen => {
+      const existing = generationsMap.get(gen.value);
+      if (existing) {
+        existing.count += gen.count;
+      } else {
+        generationsMap.set(gen.value, { ...gen });
+      }
+    });
+    
+    // Add profile 2 generations
+    data.networkProfile2Generations?.forEach(gen => {
+      const existing = generationsMap.get(gen.value);
+      if (existing) {
+        existing.count += gen.count;
+      } else {
+        generationsMap.set(gen.value, { ...gen });
+      }
+    });
+    
+    const combinedGenerations = Array.from(generationsMap.values());
+    
+    cards.push(createChartCard(
+      'network-generations',
+      'Network Types',
+      combinedGenerations,
+      colorScheme,
+      `${combinedGenerations.length} generations`
+    ));
+  }
+
+  // Network Profiles Distribution Chart
+  if (data.numberOfNetworkProfiles?.length) {
+    const profilesData = data.numberOfNetworkProfiles.map(item => ({
+      count: item.count,
+      value: item.value.toString(),
+      label: `${item.value} Profile${item.value > 1 ? 's' : ''}`
+    }));
+    
+    cards.push(createChartCard(
+      'network-profiles',
+      'Network Profiles',
+      profilesData,
+      colorScheme,
+      `${data.numberOfNetworkProfiles.length} configurations`
+    ));
+  }
+
+  // Status Chart
+  if (data.statuses?.length) {
+    cards.push(createChartCard(
+      'telecom-statuses',
+      'Status',
+      data.statuses,
+      colorScheme,
+      `${data.statuses.length} statuses`
+    ));
+  }
+
+  // Inactive Telecoms Count
+  const inactiveTelecoms = data.statuses?.find(s => s.value === 'inactive')?.count || 0;
+  if (inactiveTelecoms > 0) {
+    cards.push(createCountCard(
+      'inactive-telecoms',
+      'Inactive Telecoms',
+      inactiveTelecoms,
+      icons.inactiveIcon || React.createElement('div', { children: '📴' }),
       '#B00020'
     ));
   }

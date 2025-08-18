@@ -1,4 +1,4 @@
-// CustomTable.tsx - Complete Implementation with HTML Table Structure
+// CustomTable.tsx - Updated with DateRangePicker Integration
 import React, {
   useState,
   useEffect,
@@ -28,7 +28,15 @@ import {
   ChevronsLeft,
   ChevronsRight,
   GripVertical,
+  Calendar,
+  CloudUpload,
+  CloudDownload,
+  TableProperties,
+  Square,
+  Network,
 } from "lucide-react";
+import DateRangePicker from "../DateRangePicker/DateRangePicker"; // Import your DateRangePicker
+import { FiDownload, FiFile, FiFileText, FiGrid } from "react-icons/fi";
 
 // Custom Pagination Component - Complete Implementation
 const CustomPagination: React.FC<{
@@ -257,16 +265,29 @@ interface Column {
   renderCell?: (params: any) => React.ReactNode;
   hidden?: boolean;
 }
+export type ExportFormat = "pdf" | "xlsx" | "csv";
 
 interface Row {
   id: string | number;
   [key: string]: any;
 }
 
+interface DateFilter {
+  dateField: string;
+  dateFilterType: string;
+  fromDate?: string;
+  toDate?: string;
+  customValue?: number;
+  selectedDates?: Date[];
+  isPickAnyDate?: boolean;
+}
+
 interface Filter {
   field: string;
   value: any[];
   label?: string;
+  type?: "regular" | "date";
+  dateFilter?: DateFilter;
 }
 
 interface FilterOption {
@@ -294,7 +315,7 @@ interface DataTableProps {
     action: "view" | "edit" | "delete",
     rowId: string | number
   ) => void;
-  onExport?: () => void;
+  // onExport?: () => void;
   onImport?: (file: File) => void;
   onAdd?: () => void;
   onGetFilterOptions?: (
@@ -302,9 +323,15 @@ interface DataTableProps {
     searchText?: string
   ) => Promise<FilterOption[]>;
   height?: number;
+  onExport?: (format: ExportFormat) => void;
+  exportConfig?: {
+    modulePath: string;
+    filename: string;
+    queryParams?: { [key: string]: string };
+  };
 }
 
-// Filter Chip Component
+// Filter Chip Component - Updated to handle date filters
 const FilterChip: React.FC<{
   filter: Filter;
   colorIndex: number;
@@ -325,16 +352,57 @@ const FilterChip: React.FC<{
   ];
 
   const color = colors[colorIndex % colors.length];
-  const valueCount = filter.value.length;
 
-  // Show individual values if 1-2 values, otherwise show count
+  // Handle display text for date filters
   let displayText;
-  if (valueCount === 1) {
-    displayText = `${filter.field}: ${filter.value[0]}`;
-  } else if (valueCount === 2) {
-    displayText = `${filter.field}: ${filter.value.join(", ")}`;
+  if (filter.type === "date" && filter.dateFilter) {
+    const { dateFilterType, fromDate, toDate, customValue } = filter.dateFilter;
+
+    switch (dateFilterType) {
+      case "custom_range":
+        displayText = `${filter.field}: ${new Date(
+          fromDate!
+        ).toLocaleDateString()} - ${new Date(toDate!).toLocaleDateString()}`;
+        break;
+      case "today":
+        displayText = `${filter.field}: Today`;
+        break;
+      case "yesterday":
+        displayText = `${filter.field}: Yesterday`;
+        break;
+      case "this_week":
+        displayText = `${filter.field}: This Week`;
+        break;
+      case "this_month":
+        displayText = `${filter.field}: This Month`;
+        break;
+      case "this_year":
+        displayText = `${filter.field}: This Year`;
+        break;
+      case "last_x_days":
+        displayText = `${filter.field}: Last ${customValue} days`;
+        break;
+      case "last_x_weeks":
+        displayText = `${filter.field}: Last ${customValue} weeks`;
+        break;
+      case "last_x_months":
+        displayText = `${filter.field}: Last ${customValue} months`;
+        break;
+      case "last_x_years":
+        displayText = `${filter.field}: Last ${customValue} years`;
+        break;
+      default:
+        displayText = `${filter.field}: ${dateFilterType}`;
+    }
   } else {
-    displayText = `${filter.field} (${valueCount})`;
+    const valueCount = filter.value.length;
+    if (valueCount === 1) {
+      displayText = `${filter.field}: ${filter.value[0]}`;
+    } else if (valueCount === 2) {
+      displayText = `${filter.field}: ${filter.value.join(", ")}`;
+    } else {
+      displayText = `${filter.field} (${valueCount})`;
+    }
   }
 
   return (
@@ -366,7 +434,152 @@ const FilterChip: React.FC<{
   );
 };
 
-// Filter Popover Component
+// Date Filter Popover Component
+const DateFilterPopover: React.FC<{
+  field: string;
+  position: { x: number; y: number };
+  onClose: () => void;
+  onApply: (field: string, dateFilter: DateFilter) => void;
+  currentFilter?: DateFilter;
+}> = ({ field, position, onClose, onApply, currentFilter }) => {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
+
+  const handleDateRangeApply = (result: any) => {
+    let dateFilterType = result.preset;
+    let dateFilter: DateFilter = {
+      dateField: field,
+      dateFilterType,
+    };
+
+    switch (result.preset) {
+      case "customised":
+        dateFilter.dateFilterType = "custom_range";
+        dateFilter.fromDate = result.startDate?.toISOString();
+        dateFilter.toDate = result.endDate?.toISOString();
+        break;
+      case "pick-any-date":
+        dateFilter.selectedDates = result.selectedDates;
+        dateFilter.isPickAnyDate = true;
+        dateFilter.fromDate = result.startDate?.toISOString();
+        dateFilter.toDate = result.endDate?.toISOString();
+        break;
+      case "last-x-days":
+      case "last-x-weeks":
+      case "last-x-months":
+      case "last-x-years":
+      case "last-x-hours":
+      case "last-x-minutes":
+        const customValueMap: { [key: string]: number } = {
+          "last-x-days": 1,
+          "last-x-weeks": 1,
+          "last-x-months": 1,
+          "last-x-years": 1,
+          "last-x-hours": 1,
+          "last-x-minutes": 1,
+        };
+        dateFilter.customValue = customValueMap[result.preset] || 1;
+        dateFilter.fromDate = result.startDate?.toISOString();
+        dateFilter.toDate = result.endDate?.toISOString();
+        break;
+      default:
+        dateFilter.fromDate = result.startDate?.toISOString();
+        dateFilter.toDate = result.endDate?.toISOString();
+    }
+
+    onApply(field, dateFilter);
+    onClose();
+  };
+
+  const handleCancel = () => {
+    onClose();
+  };
+
+  const handleClear = () => {
+    onApply(field, {
+      dateField: field,
+      dateFilterType: "clear",
+    });
+    onClose();
+  };
+
+  const getSmartPosition = (x: number, y: number) => {
+    const margin = 20; // Minimum margin from screen edges
+    const popoverWidth =
+      window.innerWidth < 640
+        ? window.innerWidth * 0.9
+        : window.innerWidth < 1024
+        ? 600
+        : 1200;
+    const popoverHeight =
+      window.innerHeight < 600
+        ? window.innerHeight * 0.8
+        : window.innerHeight < 900
+        ? 500
+        : 800;
+
+    // Calculate if popover would go off-screen
+    const wouldOverflowRight = x + popoverWidth > window.innerWidth - margin;
+    const wouldOverflowBottom = y + popoverHeight > window.innerHeight - margin;
+
+    return {
+      left: wouldOverflowRight
+        ? Math.max(margin, window.innerWidth - popoverWidth - margin)
+        : Math.max(margin, x),
+      top: wouldOverflowBottom
+        ? Math.max(margin, window.innerHeight - popoverHeight - margin)
+        : Math.max(margin, y),
+      maxWidth: `${Math.min(popoverWidth, window.innerWidth - 2 * margin)}px`,
+      maxHeight: `${Math.min(
+        popoverHeight,
+        window.innerHeight - 2 * margin
+      )}px`,
+    };
+  };
+
+  const smartPosition = getSmartPosition(position.x, position.y);
+
+  return (
+    <div
+      ref={popoverRef}
+      className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-auto"
+      style={smartPosition}
+    >
+      <DateRangePicker
+        onApply={handleDateRangeApply}
+        onCancel={handleCancel}
+        onClear={handleClear}
+        placeholders={{
+          startDate: `Start ${field}`,
+          endDate: `End ${field}`,
+          fromDate: "From",
+          toDate: "To",
+        }}
+        initialStartDate={
+          currentFilter?.fromDate ? new Date(currentFilter.fromDate) : null
+        }
+        initialEndDate={
+          currentFilter?.toDate ? new Date(currentFilter.toDate) : null
+        }
+      />
+    </div>
+  );
+};
+
+// Filter Popover Component - Updated to handle date columns
 const FilterPopover: React.FC<{
   field: string;
   position: { x: number; y: number };
@@ -377,6 +590,7 @@ const FilterPopover: React.FC<{
     searchText?: string
   ) => Promise<FilterOption[]>;
   currentFilter?: string[];
+  columnType?: string;
 }> = ({
   field,
   position,
@@ -384,6 +598,7 @@ const FilterPopover: React.FC<{
   onApply,
   onGetFilterOptions,
   currentFilter = [],
+  columnType,
 }) => {
   const [options, setOptions] = useState<FilterOption[]>([]);
   const [searchText, setSearchText] = useState("");
@@ -394,7 +609,9 @@ const FilterPopover: React.FC<{
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadFilterOptions();
+    if (columnType !== "date") {
+      loadFilterOptions();
+    }
   }, [field]);
 
   useEffect(() => {
@@ -402,12 +619,14 @@ const FilterPopover: React.FC<{
   }, [currentFilter]);
 
   useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      if (searchText) {
-        loadFilterOptions(searchText);
-      }
-    }, 300);
-    return () => clearTimeout(delayedSearch);
+    if (columnType !== "date") {
+      const delayedSearch = setTimeout(() => {
+        if (searchText) {
+          loadFilterOptions(searchText);
+        }
+      }, 300);
+      return () => clearTimeout(delayedSearch);
+    }
   }, [searchText]);
 
   const loadFilterOptions = async (search?: string) => {
@@ -451,6 +670,11 @@ const FilterPopover: React.FC<{
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
+
+  // For date columns, don't show this popover
+  if (columnType === "date") {
+    return null;
+  }
 
   return (
     <div
@@ -610,15 +834,24 @@ const getFilterColor = (field: string, activeFilters: Filter[]) => {
   };
 };
 
-// Resizable Column Header
+// Resizable Column Header - Updated to show calendar icon for date columns
 const ResizableHeader: React.FC<{
   column: Column;
   sortConfig: { field: string; direction: "asc" | "desc" } | null;
   activeFilters: Filter[];
   onSort: (field: string) => void;
   onFilter: (e: React.MouseEvent, field: string) => void;
+  onDateFilter: (e: React.MouseEvent, field: string) => void;
   onResize: (field: string, width: number) => void;
-}> = ({ column, sortConfig, activeFilters, onSort, onFilter, onResize }) => {
+}> = ({
+  column,
+  sortConfig,
+  activeFilters,
+  onSort,
+  onFilter,
+  onDateFilter,
+  onResize,
+}) => {
   const [isResizing, setIsResizing] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
@@ -668,13 +901,17 @@ const ResizableHeader: React.FC<{
     ? getFilterColor(column.field, activeFilters)
     : { bg: "", border: "" };
 
+  const isDateColumn = column.type === "date";
+
   return (
     <div
       ref={headerRef}
       className="flex items-center justify-between relative group w-full h-full"
       style={{
         backgroundColor: isFiltered ? filterColor.bg : "transparent",
-        border: filterColor.border || "none",
+        // border: filterColor.border || "none",
+        borderRadius: "6px",
+        padding: "4px",
       }}
     >
       <span className="truncate text-left flex-1 pr-2">
@@ -701,7 +938,11 @@ const ResizableHeader: React.FC<{
         )}
         {column.filterable !== false && (
           <button
-            onClick={(e) => onFilter(e, column.field)}
+            onClick={(e) =>
+              isDateColumn
+                ? onDateFilter(e, column.field)
+                : onFilter(e, column.field)
+            }
             className={`p-0.5 rounded transition-colors ${
               isFiltered
                 ? "text-blue-600 hover:text-blue-700"
@@ -709,7 +950,7 @@ const ResizableHeader: React.FC<{
             }`}
             style={{ minWidth: "18px", height: "18px" }}
           >
-            <Filter size={14} />
+            {isDateColumn ? <Calendar size={14} /> : <Filter size={14} />}
           </button>
         )}
       </div>
@@ -717,7 +958,7 @@ const ResizableHeader: React.FC<{
       {/* Resize Handle */}
       {column.resizable !== false && (
         <div
-          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize transition-all duration-150 z-10 hover:bg-blue-300"
+          className="absolute right-[-14px] top-0 bottom-0 w-1 cursor-col-resize transition-all duration-150 z-10 hover:bg-blue-300"
           onMouseDown={handleMouseDown}
         >
           {isResizing && (
@@ -760,7 +1001,7 @@ const sortData = (data: Row[], field: string, direction: "asc" | "desc") => {
   });
 };
 
-// Main CustomTable Component
+// Main CustomTable Component - Updated with date filter support
 const CustomTable: React.FC<DataTableProps> = ({
   columns: initialColumns,
   rows,
@@ -797,7 +1038,22 @@ const CustomTable: React.FC<DataTableProps> = ({
     field: string;
     x: number;
     y: number;
+    columnType?: string;
   } | null>(null);
+  const [dateFilterPopover, setDateFilterPopover] = useState<{
+    field: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [exportPopover, setExportPopover] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [openActionMenu, setOpenActionMenu] = useState<string | number | null>(
+    null
+  );
+
+  const exportButtonRef = useRef<HTMLButtonElement>(null);
 
   const tableRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -976,7 +1232,7 @@ const CustomTable: React.FC<DataTableProps> = ({
     );
   }, []);
 
-  // Handle filter
+  // Handle regular filter
   const handleFilter = useCallback(
     (field: string, values: string[]) => {
       const existingFilterIndex = activeFilters.findIndex(
@@ -994,6 +1250,42 @@ const CustomTable: React.FC<DataTableProps> = ({
           field,
           value: values,
           label: `${column?.headerName}: ${values.join(", ")}`,
+          type: "regular",
+        };
+
+        if (existingFilterIndex >= 0) {
+          newFilters[existingFilterIndex] = newFilter;
+        } else {
+          newFilters.push(newFilter);
+        }
+      }
+
+      setActiveFilters(newFilters);
+      onFilter?.(newFilters);
+    },
+    [activeFilters, columns, onFilter]
+  );
+
+  // Handle date filter
+  const handleDateFilter = useCallback(
+    (field: string, dateFilter: DateFilter) => {
+      const existingFilterIndex = activeFilters.findIndex(
+        (f) => f.field === field
+      );
+      let newFilters = [...activeFilters];
+
+      if (dateFilter.dateFilterType === "clear") {
+        if (existingFilterIndex >= 0) {
+          newFilters.splice(existingFilterIndex, 1);
+        }
+      } else {
+        const column = columns.find((c) => c.field === field);
+        const newFilter: Filter = {
+          field,
+          value: [],
+          type: "date",
+          dateFilter,
+          label: `${column?.headerName}: Date Filter`,
         };
 
         if (existingFilterIndex >= 0) {
@@ -1028,8 +1320,32 @@ const CustomTable: React.FC<DataTableProps> = ({
   // Handle filter popover (from column header)
   const handleFilterClick = useCallback(
     (e: React.MouseEvent, field: string) => {
+      const column = columns.find((c) => c.field === field);
       const rect = e.currentTarget.getBoundingClientRect();
-      setFilterPopover({
+
+      if (column?.type === "date") {
+        setDateFilterPopover({
+          field,
+          x: rect.left,
+          y: rect.bottom + 5,
+        });
+      } else {
+        setFilterPopover({
+          field,
+          x: rect.left,
+          y: rect.bottom + 5,
+          columnType: column?.type,
+        });
+      }
+    },
+    [columns]
+  );
+
+  // Handle date filter click
+  const handleDateFilterClick = useCallback(
+    (e: React.MouseEvent, field: string) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDateFilterPopover({
         field,
         x: rect.left,
         y: rect.bottom + 5,
@@ -1039,37 +1355,165 @@ const CustomTable: React.FC<DataTableProps> = ({
   );
 
   // Handle filter chip click
-  const handleFilterChipClick = useCallback((field: string) => {
-    // Find a reference element for positioning
-    const chipElement = document.querySelector(
-      `[data-filter-field="${field}"]`
-    );
-    if (chipElement) {
-      const rect = chipElement.getBoundingClientRect();
-      setFilterPopover({
-        field,
-        x: rect.left,
-        y: rect.bottom + 5,
-      });
-    } else {
-      // Fallback positioning
-      setFilterPopover({
-        field,
-        x: 200,
-        y: 150,
-      });
-    }
-  }, []);
+  const handleFilterChipClick = useCallback(
+    (field: string) => {
+      const filter = activeFilters.find((f) => f.field === field);
+      const chipElement = document.querySelector(
+        `[data-filter-field="${field}"]`
+      );
+
+      if (chipElement) {
+        const rect = chipElement.getBoundingClientRect();
+
+        if (filter?.type === "date") {
+          setDateFilterPopover({
+            field,
+            x: rect.left,
+            y: rect.bottom + 5,
+          });
+        } else {
+          setFilterPopover({
+            field,
+            x: rect.left,
+            y: rect.bottom + 5,
+          });
+        }
+      } else {
+        // Fallback positioning
+        if (filter?.type === "date") {
+          setDateFilterPopover({
+            field,
+            x: 200,
+            y: 150,
+          });
+        } else {
+          setFilterPopover({
+            field,
+            x: 200,
+            y: 150,
+          });
+        }
+      }
+    },
+    [activeFilters]
+  );
 
   // Sync columns when initialColumns change
   useEffect(() => {
     setColumns(initialColumns);
   }, [initialColumns]);
 
+  // Close action menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        openActionMenu &&
+        !(event.target as Element).closest(".action-menu-container")
+      ) {
+        setOpenActionMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openActionMenu]);
+
   const isAllSelected =
     selectedRows.size === sortedRows.length && sortedRows.length > 0;
   const isIndeterminate =
     selectedRows.size > 0 && selectedRows.size < sortedRows.length;
+
+  const ExportPopover: React.FC<{
+    position: { x: number; y: number };
+    onClose: () => void;
+    onExport: (format: ExportFormat) => void;
+  }> = ({ position, onClose, onExport }) => {
+    const popoverRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          popoverRef.current &&
+          !popoverRef.current.contains(event.target as Node)
+        ) {
+          onClose();
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }, [onClose]);
+
+    const exportOptions = [
+      { format: "pdf" as ExportFormat, label: "PDF", icon: FiFileText },
+      { format: "xlsx" as ExportFormat, label: "EXCEL", icon: FiFile },
+      { format: "csv" as ExportFormat, label: "CSV", icon: FiGrid },
+    ];
+
+    const handleExportClick = (format: ExportFormat) => {
+      onExport(format);
+      onClose();
+    };
+
+    return (
+      <div
+        ref={popoverRef}
+        className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
+        style={{
+          left: position.x,
+          top: position.y,
+          width: "141px",
+          height: "102px",
+        }}
+      >
+        <div className="flex flex-col h-full">
+          {exportOptions.map((option, index) => {
+            const Icon = option.icon;
+            return (
+              <button
+                key={option.format}
+                onClick={() => handleExportClick(option.format)}
+                className={`flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 transition-colors text-left w-full ${
+                  index !== exportOptions.length - 1
+                    ? "border-b border-gray-200"
+                    : ""
+                }`}
+                style={{
+                  height: "34px",
+                  fontFamily: "Work Sans",
+                  fontWeight: 700,
+                  fontSize: "12px",
+                  lineHeight: "100%",
+                  letterSpacing: "0.03em",
+                  textTransform: "capitalize",
+                  color: "#4B5563",
+                }}
+              >
+                <Icon size={16} className="text-gray-600" />
+                <span>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const handleExportClick = useCallback((e: React.MouseEvent) => {
+    if (exportButtonRef.current) {
+      const rect = exportButtonRef.current.getBoundingClientRect();
+      setExportPopover({
+        x: rect.left,
+        y: rect.bottom + 5,
+      });
+    }
+  }, []);
+
+  const handleExportFormat = useCallback(
+    (format: ExportFormat) => {
+      onExport?.(format);
+    },
+    [onExport]
+  );
 
   return (
     <>
@@ -1078,14 +1522,14 @@ const CustomTable: React.FC<DataTableProps> = ({
         style={{
           height,
           maxWidth: "calc(100vw - 6.8rem)",
-          width: "100%",
+          width: "98%",
           fontFamily:
             "Work Sans, -apple-system, BlinkMacSystemFont, sans-serif",
         }}
       >
         {/* Toolbar */}
         <div
-          className="flex items-center justify-between mb-2 px-2"
+          className="flex items-center justify-between mb-2 "
           style={{
             height: toolbarHeight,
             backgroundColor: "#FFFFFF",
@@ -1096,7 +1540,7 @@ const CustomTable: React.FC<DataTableProps> = ({
             {/* Columns Button */}
             <button
               onClick={() => setShowColumnSettings(true)}
-              className="flex items-center space-x-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700"
+              className="flex items-center space-x-1 px-3 py-1 bg-[#EEEEEE] hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700"
             >
               <Settings size={16} />
               <span>Columns</span>
@@ -1113,54 +1557,59 @@ const CustomTable: React.FC<DataTableProps> = ({
                 placeholder="Search for vehicles or devices"
                 value={searchText}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10 pr-4 py-1.5 border border-blue-800/50 rounded-lg text-xs text-gray-600 font-medium leading-none bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-100 w-64"
+                className="pl-10 pr-4 py-1.5 border border-blue-800/50 rounded-lg text-xs text-gray-600 font-medium leading-none bg-[#EEEEEE] focus:outline-none focus:ring-2 focus:ring-blue-100 w-64"
                 style={{
                   fontFamily: "Work Sans",
                   letterSpacing: "0.03em",
                 }}
               />
             </div>
-
-            {/* Filter Button */}
-            <button className="p-1 rounded bg-gray-100 text-gray-600">
-              <Filter size={16} />
-            </button>
           </div>
 
           <div className="flex items-center space-x-2">
             {/* Import */}
-            <button
-              onClick={() => document.getElementById("import-file")?.click()}
-              className="flex items-center space-x-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700"
-            >
-              <Upload size={16} />
-              <span>Import</span>
-            </button>
-            <input
-              id="import-file"
-              type="file"
-              className="hidden"
-              accept=".csv,.xlsx,.xls"
-              onChange={(e) =>
-                e.target.files?.[0] && onImport?.(e.target.files[0])
-              }
-            />
+            <div className="flex rounded-lg  overflow-hidden">
+              <button
+                onClick={() => document.getElementById("import-file")?.click()}
+                className="flex items-center space-x-1 px-3 py-1 bg-[#EEEEEE] hover:bg-gray-200 text-sm font-medium text-gray-700 rounded-l-lg border-r border-gray-300"
+              >
+                <CloudUpload size={16} />
+                <span>Import</span>
+              </button>
+              <input
+                id="import-file"
+                type="file"
+                className="hidden"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) =>
+                  e.target.files?.[0] && onImport?.(e.target.files[0])
+                }
+              />
 
-            {/* Export */}
-            <button
-              onClick={onExport}
-              className="flex items-center space-x-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700"
-            >
-              <Download size={16} />
-              <span>Export</span>
-            </button>
-
+              <button
+                ref={exportButtonRef}
+                onClick={handleExportClick}
+                className="flex items-center space-x-2 px-3 py-1 bg-[#EEEEEE] hover:bg-gray-200 text-sm font-medium text-gray-700 rounded-r-lg"
+              >
+                <FiDownload size={16} />
+                <span>Export</span>
+              </button>
+            </div>
             {/* Table View */}
-            <button className="flex items-center space-x-1 px-3 py-1 bg-[#1F3A8A] text-white rounded-lg text-sm font-medium hover:bg-[#1F3A8A]/90">
-              <Grid3X3 size={16} />
-              <span>Table View</span>
-            </button>
-
+            <div className="flex rounded-lg bg-[#EEEEEE] p-[3px] overflow-hidden">
+              <button className="flex items-center space-x-1 px-3 py-[2px] bg-[#FFFFFF] text-[#1F3A8A] rounded-lg text-sm font-large">
+                <TableProperties size={16} />
+                <span>Table View</span>
+              </button>
+              <button className="flex items-center space-x-1 px-3 py-[2px]  text-[#1F3A8A] rounded-lg text-sm font-large">
+                <Square size={16} />
+                {/* <span className="">Table View</span> */}
+              </button>
+              <button className="flex items-center space-x-1 px-3 py-[2px]  text-[#1F3A8A] rounded-lg text-sm font-large">
+                <Network size={16} />
+                {/* <span className="">Table View</span> */}
+              </button>
+            </div>
             {/* Add Button */}
             <button
               onClick={onAdd}
@@ -1174,7 +1623,7 @@ const CustomTable: React.FC<DataTableProps> = ({
         {/* Active Filters */}
         {activeFilters.length > 0 && (
           <div
-            className="mb-2 py-2 px-2"
+            className="mb-2 py-2 px-2 flex items-center justify-between "
             style={{
               backgroundColor: "#EEEEEE",
               borderRadius: "8px",
@@ -1196,7 +1645,7 @@ const CustomTable: React.FC<DataTableProps> = ({
             </div>
             <button
               onClick={clearAllFilters}
-              className="mt-2 px-3 py-1 text-xs font-medium text-white rounded-md hover:opacity-90"
+              className="px-3 py-1 text-xs font-medium text-white rounded-md hover:opacity-90"
               style={{ backgroundColor: "#1F3A8A" }}
             >
               CLEAR ALL FILTERS
@@ -1215,7 +1664,7 @@ const CustomTable: React.FC<DataTableProps> = ({
               <tr>
                 {/* Selection Header */}
                 <th
-                  className="sticky left-0 z-20 bg-gray-50 border-r border-gray-200 px-3"
+                  className="sticky left-0 z-20 bg-[#EEEEEE] border-r border-gray-200 px-3"
                   style={{ width: 50 }}
                 >
                   <input
@@ -1241,7 +1690,7 @@ const CustomTable: React.FC<DataTableProps> = ({
                 {visibleColumns.map((column) => (
                   <th
                     key={column.field}
-                    className="px-3 border-r border-gray-200 last:border-r-0 relative group bg-gray-50"
+                    className="px-3 border-r border-gray-200 last:border-r-0 relative group bg-[#EEEEEE]"
                     style={{
                       width: column.width,
                       minWidth: column.width,
@@ -1259,6 +1708,7 @@ const CustomTable: React.FC<DataTableProps> = ({
                       activeFilters={activeFilters}
                       onSort={handleSort}
                       onFilter={handleFilterClick}
+                      onDateFilter={handleDateFilterClick}
                       onResize={handleColumnResize}
                     />
                   </th>
@@ -1266,7 +1716,7 @@ const CustomTable: React.FC<DataTableProps> = ({
 
                 {/* Action Header */}
                 <th
-                  className="sticky right-0 z-20 bg-gray-50 border-l border-gray-200 px-3"
+                  className="sticky right-0 z-20 bg-[#EEEEEE] border-l border-gray-200 px-3"
                   style={{ width: 80 }}
                 >
                   <span
@@ -1374,33 +1824,51 @@ const CustomTable: React.FC<DataTableProps> = ({
                         style={{ width: 80 }}
                       >
                         <div className="flex items-center justify-center px-3">
-                          <div className="relative group">
-                            <button className="p-1.5 rounded hover:bg-gray-100 transition-colors">
+                          <div className="relative action-menu-container">
+                            <button
+                              onClick={() =>
+                                setOpenActionMenu(
+                                  openActionMenu === row.id ? null : row.id
+                                )
+                              }
+                              className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                            >
                               <MoreHorizontal size={16} />
                             </button>
-                            <div className="absolute right-0 top-8 hidden group-hover:block bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-36">
-                              <button
-                                onClick={() => onRowAction?.("view", row.id)}
-                                className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <Eye size={14} />
-                                <span>View Details</span>
-                              </button>
-                              <button
-                                onClick={() => onRowAction?.("edit", row.id)}
-                                className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <Edit size={14} />
-                                <span>Edit Details</span>
-                              </button>
-                              <button
-                                onClick={() => onRowAction?.("delete", row.id)}
-                                className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 size={14} />
-                                <span>Delete</span>
-                              </button>
-                            </div>
+                            {openActionMenu === row.id && (
+                              <div className="absolute right-14 top-0 bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-36">
+                                <button
+                                  onClick={() => {
+                                    onRowAction?.("view", row.id);
+                                    setOpenActionMenu(null);
+                                  }}
+                                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                  <Eye size={14} />
+                                  <span>View Details</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    onRowAction?.("edit", row.id);
+                                    setOpenActionMenu(null);
+                                  }}
+                                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                  <Edit size={14} />
+                                  <span>Edit Details</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    onRowAction?.("delete", row.id);
+                                    setOpenActionMenu(null);
+                                  }}
+                                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 size={14} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -1549,7 +2017,7 @@ const CustomTable: React.FC<DataTableProps> = ({
           </div>
         )}
 
-        {/* Filter Popover */}
+        {/* Regular Filter Popover */}
         {filterPopover && (
           <FilterPopover
             field={filterPopover.field}
@@ -1561,6 +2029,30 @@ const CustomTable: React.FC<DataTableProps> = ({
               activeFilters.find((f) => f.field === filterPopover.field)
                 ?.value || []
             }
+            columnType={filterPopover.columnType}
+          />
+        )}
+
+        {/* Date Filter Popover */}
+        {dateFilterPopover && (
+          <DateFilterPopover
+            field={dateFilterPopover.field}
+            position={{ x: dateFilterPopover.x, y: dateFilterPopover.y }}
+            onClose={() => setDateFilterPopover(null)}
+            onApply={handleDateFilter}
+            currentFilter={
+              activeFilters.find((f) => f.field === dateFilterPopover.field)
+                ?.dateFilter
+            }
+          />
+        )}
+
+        {/* Export Popover */}
+        {exportPopover && onExport && (
+          <ExportPopover
+            position={{ x: exportPopover.x, y: exportPopover.y }}
+            onClose={() => setExportPopover(null)}
+            onExport={handleExportFormat}
           />
         )}
       </div>

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiHome, FiUsers } from "react-icons/fi";
 import ModuleHeader from "../../../components/ui/ModuleHeader";
-import CustomTable from "../../../components/ui/CustomTable/CustomTable";
+import CustomTable, { ExportFormat } from "../../../components/ui/CustomTable/CustomTable";
 import strings from "../../../global/constants/StringConstants";
 import urls from "../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
@@ -16,6 +16,7 @@ import CustomSummary, {
 } from "../../../components/CustomSummary/CustomSummary";
 import { getConfigPreset } from "../../../components/CustomSummary/utils/summaryConfigPresets";
 import { store } from "../../../store";
+import { exportService } from "../../../core-services/rest-api/apiHelpers";
 
 // Types
 interface Column {
@@ -35,11 +36,25 @@ interface Row {
   [key: string]: any;
 }
 
+// Updated Filter interface to support date filters
+interface DateFilter {
+  dateField: string;
+  dateFilterType: string;
+  fromDate?: string;
+  toDate?: string;
+  customValue?: number;
+  selectedDates?: Date[];
+  isPickAnyDate?: boolean;
+}
+
 interface Filter {
   field: string;
   value: any[];
   label?: string;
+  type?: "regular" | "date";
+  dateFilter?: DateFilter;
 }
+
 
 interface FilterOption {
   value: string;
@@ -207,22 +222,34 @@ const Groups: React.FC = () => {
         width: 120,
         type: "date",
         sortable: true,
-        filterable: false,
+        filterable: true,
         resizable: true,
         renderCell: (params) => (
-          <span>{new Date(params.value).toLocaleDateString()}</span>
+          <span>{new Date(params.value).toLocaleString()}</span>
         ),
       },
       {
-        field: "updatedTime",
-        headerName: "Updated",
+        field: "updatedAt",
+        headerName: "Updated At",
         width: 120,
         type: "date",
         sortable: true,
-        filterable: false,
+        filterable: true,
         resizable: true,
         renderCell: (params) => (
-          <span>{new Date(params.value).toLocaleDateString()}</span>
+          <span>{new Date(params.value).toLocaleString()}</span>
+        ),
+      },
+            {
+        field: "updatedAt",
+        headerName: "Inactive",
+        width: 120,
+        type: "date",
+        sortable: true,
+        filterable: true,
+        resizable: true,
+        renderCell: (params) => (
+          <span>{new Date(params.value).toLocaleString()}</span>
         ),
       },
     ],
@@ -474,32 +501,23 @@ const Groups: React.FC = () => {
     navigate(urls.addGroupViewPath);
   }, [navigate]);
 
+
   // Handle export
-  const handleExport = useCallback(async () => {
+  const handleExport = async (format: ExportFormat) => {
     try {
-      setLoading(true);
-      const blob = await groupServices.export(activeFilters);
+      await exportService.exportData(
+        `${urls.groupMasterViewPath}/export`,
+        format,
+        "groups"
+      );
 
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `groups_export_${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success("Groups exported successfully");
+      toast.success(`Groups exported successfully as ${format.toUpperCase()}`);
     } catch (error: any) {
-      console.error("Error exporting groups:", error);
-      toast.error(error.message || "Failed to export groups");
-    } finally {
-      setLoading(false);
+      console.error("Export failed:", error.message);
+      toast.error("Export failed. Please try again.");
     }
-  }, [activeFilters]);
+  };
+
 
   // Handle import
   const handleImport = useCallback(
@@ -542,21 +560,25 @@ const Groups: React.FC = () => {
   );
 
   return (
-    <div
+   <div
       style={{
         background: "#FFFFFF",
         borderTopLeftRadius: "24px",
         borderTopRightRadius: "24px",
+        // position:"fixed",
+        height: "100%",
       }}
     >
       <ModuleHeader
         title={strings.GROUPS}
         breadcrumbs={breadcrumbs}
         className="rounded-t-[24px]"
+        style="px-4"
+        titleClassName="module-title-custom"
       />
       {/* Pure CustomSummary Component */}
       <div
-        className="mt-2 w-full mx-auto"
+        className="mt-2 w-full px-4"
         style={{
           maxWidth: "calc(100vw - 6.8rem)", // Match the table container width
         }}
@@ -575,7 +597,7 @@ const Groups: React.FC = () => {
           columns={columns}
           rows={groups}
           loading={loading}
-          height={650}
+          height={600}
           pagination={{
             page: currentPage,
             pageSize: pageSize,

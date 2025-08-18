@@ -129,7 +129,7 @@ export const LoginPage: React.FC = () => {
 
   const handleGoogleSignIn = () => {
     // Placeholder for Google Sign In
-    toast.info("Google Sign In will be implemented later");
+    toast("Google Sign In will be implemented later");
   };
 
   return (

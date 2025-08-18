@@ -16,6 +16,8 @@ import strings from "../../../../global/constants/StringConstants";
 import urls from "../../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
 import { tabTitle } from "../../../../utils/tab-title";
+import ProgressBar from "../../../../components/ui/ProgressBar";
+import Button from "../../../../components/ui/Button";
 
 // Form state type
 interface RoleFormState {
@@ -80,11 +82,6 @@ const AddEditRoleForm: React.FC = () => {
     { value: "inactive", label: "Inactive" },
   ];
 
-  // const roleTypeOptions = USER_ROLE_TYPES.map((type) => ({
-  //   value: type.toLowerCase().replace(/\s+/g, "_"),
-  //   label: type,
-  // }));
-
   const moduleOptions = AVAILABLE_MODULES.map((module) => ({
     value: module,
     label: module.replace(/_/g, " "),
@@ -104,6 +101,90 @@ const AddEditRoleForm: React.FC = () => {
       icon: FiPlus,
     },
   ];
+
+  // Update this function to count only required fields
+  const calculateProgress = () => {
+    // Define which fields are required
+    const requiredFields = [
+      "name",
+      "displayName",
+      "description",
+      "modulePermissions",
+      "status",
+    ] as (keyof RoleFormState)[];
+
+    let filledRequiredFields = 0;
+
+    requiredFields.forEach((fieldName) => {
+      const field:any = formData[fieldName];
+
+      if (fieldName === "modulePermissions") {
+        // Special handling for modulePermissions
+        if (field?.value?.length > 0) {
+          // Check if all module permissions have both module and permissions selected
+          const allValid = field?.value?.every(
+            (mp: any) =>
+              mp.module &&
+              mp.module.trim() !== "" &&
+              mp.permissions &&
+              mp.permissions.length > 0
+          );
+          if (allValid) {
+            filledRequiredFields++;
+          }
+        }
+      } else {
+        // Regular field handling
+        const value = field.value;
+        if (
+          value !== null &&
+          value !== undefined &&
+          String(value).trim() !== ""
+        ) {
+          filledRequiredFields++;
+        }
+      }
+    });
+
+    const totalRequiredFields = requiredFields.length;
+    const progress =
+      totalRequiredFields > 0
+        ? Math.round((filledRequiredFields / totalRequiredFields) * 100)
+        : 0;
+
+    // Debug log to check calculation
+    console.log("Progress calculation (required fields only):", {
+      filledRequiredFields,
+      totalRequiredFields,
+      progress,
+      modulePermissionsValid:
+        formData.modulePermissions.value.length > 0 &&
+        formData.modulePermissions.value.every(
+          (mp) =>
+            mp.module &&
+            mp.module.trim() !== "" &&
+            mp.permissions &&
+            mp.permissions.length > 0
+        ),
+    });
+
+    return progress;
+  };
+
+  const getProgressMessage = () => {
+    const progress = calculateProgress();
+    if (progress === 0) return "You are about to add a new role.";
+    if (progress < 50)
+      return "Please continue filling the required fields to proceed.";
+    if (progress < 100)
+      return "Almost done! Complete the remaining required fields.";
+    return "All required fields completed! You can now save the role.";
+  };
+
+  // Add this helper function to check if form is complete
+  const isFormComplete = () => {
+    return calculateProgress() === 100;
+  };
 
   useEffect(() => {
     if (isEdit && id) {
@@ -152,7 +233,7 @@ const AddEditRoleForm: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         [field]: {
-          value: value as string,
+          value: value === null ? "" : (value as string),
           error: "",
         },
       }));
@@ -285,7 +366,7 @@ const AddEditRoleForm: React.FC = () => {
     } else {
       // Validate each module permission
       for (let i = 0; i < formData.modulePermissions.value.length; i++) {
-        const mp = formData.modulePermissions.value[i];
+        const mp:any = formData.modulePermissions.value[i];
         if (!mp.module || mp.permissions.length === 0) {
           errors.modulePermissions = {
             ...formData.modulePermissions,
@@ -341,7 +422,7 @@ const AddEditRoleForm: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate(urls.rolesViewPath);
+    navigate(-1);
   };
 
   if (loading && isEdit) {
@@ -353,191 +434,253 @@ const AddEditRoleForm: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-secondary">
+    <div className="min-h-screen bg-theme-secondary rounded-t-[24px] overflow-hidden flex flex-col">
       <ModuleHeader
         title={isEdit ? strings.EDIT_ROLE : strings.ADD_ROLE}
         breadcrumbs={breadcrumbs}
-        showCancelButton
-        showSaveButton
-        onSaveClick={handleSave}
-        onCancelClick={handleCancel}
-        saveText={saving ? "Saving..." : "Save"}
+        className="rounded-t-[24px]"
+        titleClassName="module-title-custom"
       />
-
-      <div className="p-6">
-        <Card>
-          <Card.Body className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <CustomInput
-                  label={strings.ROLE_NAME}
-                  value={formData.name.value}
-                  onChange={handleInputChange("name")}
-                  onBlur={handleBlur("name")}
-                  required
-                  placeholder="Enter role name"
-                  disabled={
-                    saving || (isEdit && formData.name.value === "superadmin")
-                  }
-                  autoValidate={false}
-                  error={formData.name.error}
-                />
-              </div>
-
-              <div>
-                <CustomInput
-                  label={strings.DISPLAY_NAME}
-                  value={formData.displayName.value}
-                  onChange={handleInputChange("displayName")}
-                  onBlur={handleBlur("displayName")}
-                  required
-                  placeholder="Enter display name"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.displayName.error}
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <CustomInput
-                  label={strings.DESCRIPTION}
-                  value={formData.description.value}
-                  onChange={handleInputChange("description")}
-                  onBlur={handleBlur("description")}
-                  required
-                  placeholder="Enter role description"
-                  disabled={saving}
-                  autoValidate={false}
-                  error={formData.description.error}
-                />
-              </div>
-
-              {isEdit && (
+      {/* Main content area */}
+      <div className="flex-1">
+        <div className="p-6">
+          <Card className="p-6 !rounded-[24px]">
+            <Card.Body className="p-6">
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Select
-                    label="Status"
-                    options={statusOptions}
-                    value={formData.status.value}
-                    onChange={handleSelectChange("status")}
-                    placeholder="Select Status"
+                  <CustomInput
+                    label={strings.ROLE_NAME}
+                    value={formData.name.value}
+                    onChange={handleInputChange("name")}
+                    onBlur={handleBlur("name")}
                     required
-                    disabled={saving}
-                    error={formData.status.error}
+                    placeholder="Enter role name"
+                    disabled={
+                      saving || (isEdit && formData.name.value === "superadmin")
+                    }
+                    autoValidate={false}
+                    error={formData.name.error}
                   />
                 </div>
-              )}
-            </div>
 
-            {/* Module Permissions Section */}
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3
-                  className="text-lg font-medium"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Module Permissions
-                </h3>
-                <button
-                  type="button"
-                  onClick={addModulePermission}
-                  disabled={saving}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                >
-                  <FiPlus className="w-4 h-4 mr-1" />
-                  Add Module
-                </button>
-              </div>
-
-              {formData.modulePermissions.error && (
-                <div className="text-red-600 text-sm mb-4">
-                  {formData.modulePermissions.error}
+                <div>
+                  <CustomInput
+                    label={strings.DISPLAY_NAME}
+                    value={formData.displayName.value}
+                    onChange={handleInputChange("displayName")}
+                    onBlur={handleBlur("displayName")}
+                    required
+                    placeholder="Enter display name"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.displayName.error}
+                  />
                 </div>
-              )}
 
-              <div className="space-y-4">
-                {formData.modulePermissions.value.map(
-                  (modulePermission, index) => (
-                    <div
-                      key={index}
-                      className="rounded-lg p-4"
-                      style={{
-                        backgroundColor: "var(--bg-primary)",
-                        border: "1px solid var(--border-light)",
-                      }}
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <h4
-                          className="text-md font-medium"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          Module Permission {index + 1}
-                        </h4>
-                        {formData.modulePermissions.value.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeModulePermission(index)}
-                            disabled={saving}
-                            className="text-red-600 hover:text-red-800 disabled:opacity-50"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
+                <div className="md:col-span-2">
+                  <CustomInput
+                    label={strings.DESCRIPTION}
+                    value={formData.description.value}
+                    onChange={handleInputChange("description")}
+                    onBlur={handleBlur("description")}
+                    required
+                    placeholder="Enter role description"
+                    disabled={saving}
+                    autoValidate={false}
+                    error={formData.description.error}
+                  />
+                </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Select
-                            label="Module"
-                            options={getAvailableModulesForIndex(index)}
-                            value={modulePermission.module}
-                            onChange={(value) =>
-                              updateModulePermission(
-                                index,
-                                "module",
-                                value as string
-                              )
-                            }
-                            placeholder="Select Module"
-                            required
-                            disabled={saving}
-                          />
-                        </div>
-
-                        <div>
-                          <Select
-                            label="Permissions"
-                            options={permissionOptions}
-                            value={modulePermission.permissions}
-                            onChange={(value) =>
-                              updateModulePermission(
-                                index,
-                                "permissions",
-                                value as string[]
-                              )
-                            }
-                            placeholder="Select Permissions"
-                            multiple
-                            required
-                            disabled={saving}
-                            helper="You can select multiple permissions"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )
+                {isEdit && (
+                  <div>
+                    <Select
+                      label="Status"
+                      options={statusOptions}
+                      value={formData.status.value}
+                      onChange={handleSelectChange("status")}
+                      placeholder="Select Status"
+                      required
+                      disabled={saving}
+                      error={formData.status.error}
+                    />
+                  </div>
                 )}
               </div>
 
-              {formData.modulePermissions.value.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No module permissions added. Click "Add Module" to get
-                  started.
+              {/* Module Permissions Section */}
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3
+                    className="text-lg font-medium"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Module Permissions *
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={addModulePermission}
+                    disabled={saving}
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+                  >
+                    <FiPlus className="w-4 h-4 mr-1" />
+                    Add Module
+                  </button>
                 </div>
-              )}
-            </div>
-          </Card.Body>
-        </Card>
+
+                {formData.modulePermissions.error && (
+                  <div className="text-red-600 text-sm mb-4">
+                    {formData.modulePermissions.error}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {formData.modulePermissions.value.map(
+                    (modulePermission, index) => (
+                      <div
+                        key={index}
+                        className="rounded-lg p-4"
+                        style={{
+                          backgroundColor: "var(--bg-primary)",
+                          border: "1px solid var(--border-light)",
+                        }}
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <h4
+                            className="text-md font-medium"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            Module Permission {index + 1}
+                          </h4>
+                          {formData.modulePermissions.value.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeModulePermission(index)}
+                              disabled={saving}
+                              className="text-red-600 hover:text-red-800 disabled:opacity-50"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Select
+                              label="Module"
+                              options={getAvailableModulesForIndex(index)}
+                              value={modulePermission.module}
+                              onChange={(value) =>
+                                updateModulePermission(
+                                  index,
+                                  "module",
+                                  value as string
+                                )
+                              }
+                              placeholder="Select Module"
+                              required
+                              disabled={saving}
+                            />
+                          </div>
+
+                          <div>
+                            <Select
+                              label="Permissions"
+                              options={permissionOptions}
+                              value={modulePermission.permissions}
+                              onChange={(value) =>
+                                updateModulePermission(
+                                  index,
+                                  "permissions",
+                                  value as string[]
+                                )
+                              }
+                              placeholder="Select Permissions"
+                              multiple
+                              required
+                              disabled={saving}
+                              helper="You can select multiple permissions"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+
+                {formData.modulePermissions.value.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No module permissions added. Click "Add Module" to get
+                    started.
+                  </div>
+                )}
+              </div>
+
+              {/* Progress Bar Section - Inside Card */}
+              <div className="mt-16">
+                <ProgressBar value={calculateProgress()} animated={true} />
+
+                {/* Message and Buttons on same line - Inside Card */}
+                <div className="flex items-center justify-between mt-4">
+                  {/* Progress Message */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#1F3A8A] flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    </div>
+                    <p className="text-sm text-[#1F3A8A] font-medium">
+                      {getProgressMessage()}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#F3F4F6",
+                        text: "#374151",
+                        border: "#E5E7EB",
+                        hover: { background: "#F1F1F1" },
+                      }}
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="btn-custom-hover border"
+                      size="lg"
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="custom"
+                      customColors={{
+                        background: "#1F3A8A",
+                        text: "#FFFFFF",
+                        hover: { background: "#1D40B0" },
+                      }}
+                      onClick={handleSave}
+                      loading={saving}
+                      disabled={saving || !isFormComplete()}
+                      className="btn-custom-hover"
+                      size="lg"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#1F3A8A] text-white py-4">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center text-sm">
+            Routeye software - All rights reserved - © 2025
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

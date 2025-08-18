@@ -4,7 +4,6 @@ import {
   getRequest,
   postRequest,
   patchRequest,
-  putRequest,
 } from "../../../../core-services/rest-api/apiHelpers";
 import urls from "../../../../global/constants/UrlConstants";
 
@@ -107,11 +106,24 @@ interface PaginatedResponse<T> {
   hasPrev: boolean;
 }
 
-// Filter interface
+// Date Filter interface
+interface DateFilter {
+  dateField: string;
+  dateFilterType: string;
+  fromDate?: string;
+  toDate?: string;
+  customValue?: number;
+  selectedDates?: Date[];
+  isPickAnyDate?: boolean;
+}
+
+// Filter interface - Updated to support date filters
 interface Filter {
   field: string;
   value: any[];
   label?: string;
+  type?: "regular" | "date";
+  dateFilter?: DateFilter;
 }
 
 interface FilterSummaryResponse {
@@ -242,6 +254,100 @@ const transformGroupMasterToRow = (groupMaster: GroupMasterData): Row => {
   };
 };
 
+// Helper function to convert DateRangePicker preset to API format
+const convertDateFilterTypeToAPI = (dateFilterType: string): string => {
+  const mapping: { [key: string]: string } = {
+    customised: "custom_range",
+    today: "today",
+    yesterday: "yesterday",
+    "this-week": "this_week",
+    "this-month": "this_month",
+    "this-year": "this_year",
+    "last-x-days": "last_x_days",
+    "last-x-weeks": "last_x_weeks",
+    "last-x-months": "last_x_months",
+    "last-x-years": "last_x_years",
+    "last-x-hours": "last_x_hours",
+    "last-x-minutes": "last_x_minutes",
+    "pick-any-date": "custom_range", // Handle as custom range for now
+  };
+
+  return mapping[dateFilterType] || dateFilterType;
+};
+
+// Helper function to format date without timezone conversion
+const formatDateForAPI = (date: Date): string => {
+  // Format date as YYYY-MM-DDTHH:mm:ss.sssZ without timezone conversion
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}Z`;
+};
+
+// Helper function to process date filters for API
+const processDateFilters = (filters: Filter[], payload: any) => {
+  const dateFilters = filters.filter((f) => f.type === "date" && f.dateFilter);
+
+  dateFilters.forEach((filter) => {
+    const dateFilter = filter.dateFilter!;
+    const apiField = dateFilter.dateField;
+
+    // Set the date field (e.g., "createdAt", "updatedAt")
+    payload.dateField = apiField;
+
+    // Convert the filter type to API format
+    payload.dateFilterType = convertDateFilterTypeToAPI(
+      dateFilter.dateFilterType
+    );
+
+    // Handle different date filter types
+    switch (payload.dateFilterType) {
+      case "custom_range":
+        if (dateFilter.fromDate && dateFilter.toDate) {
+          // Use our custom formatter to avoid timezone conversion
+          const fromDate = new Date(dateFilter.fromDate);
+          const toDate = new Date(dateFilter.toDate);
+
+          payload.fromDate = formatDateForAPI(fromDate);
+          payload.toDate = formatDateForAPI(toDate);
+        }
+        break;
+
+      case "last_x_days":
+      case "last_x_weeks":
+      case "last_x_months":
+      case "last_x_years":
+      case "last_x_hours":
+      case "last_x_minutes":
+        if (dateFilter.customValue) {
+          payload.customValue = dateFilter.customValue;
+        }
+        break;
+
+      case "pick_any_date":
+        // For pick any date, we'll use custom range with the selected dates
+        if (dateFilter.selectedDates && dateFilter.selectedDates.length > 0) {
+          const sortedDates = [...dateFilter.selectedDates].sort();
+          payload.dateFilterType = "custom_range";
+          payload.fromDate = formatDateForAPI(sortedDates[0]);
+          payload.toDate = formatDateForAPI(
+            sortedDates[sortedDates.length - 1]
+          );
+        }
+        break;
+
+      // For preset filters like "today", "yesterday", etc., no additional params needed
+      default:
+        break;
+    }
+  });
+};
+
 export const groupsMasterServices = {
   // Updated getAll method - now uses filter API exclusively
   getAll: async (
@@ -269,9 +375,14 @@ export const groupsMasterServices = {
         payload.sortOrder = sortDirection;
       }
 
-      // Transform filters to the API format
+      // Process filters
       if (filters && filters.length > 0) {
-        filters.forEach((filter) => {
+        // Separate regular filters and date filters
+        const regularFilters = filters.filter((f) => f.type !== "date");
+        const dateFilters = filters.filter((f) => f.type === "date");
+
+        // Handle regular filters
+        regularFilters.forEach((filter) => {
           switch (filter.field) {
             case "groupType":
               payload.groupTypes = filter.value;
@@ -301,6 +412,10 @@ export const groupsMasterServices = {
               payload[`${filter.field}s`] = filter.value;
           }
         });
+        // Handle date filters
+        if (dateFilters.length > 0) {
+          processDateFilters(dateFilters, payload);
+        }
       }
 
       // Always use the filter endpoint
@@ -459,7 +574,7 @@ export const groupsMasterServices = {
       if (groupMasterData.status !== undefined)
         payload.status = groupMasterData.status;
 
-      const response: ApiResponse<GroupMasterData> = await putRequest(
+      const response: ApiResponse<GroupMasterData> = await patchRequest(
         `${urls.groupMasterViewPath}/${id}`,
         payload
       );
@@ -500,77 +615,6 @@ export const groupsMasterServices = {
     } catch (error: any) {
       console.error("Error inactivating groups master:", error.message);
       throw new Error(error.message || "Failed to inactivate groups master");
-    }
-  },
-
-  // Export groups - Updated to work with filters
-  export: async (filters?: Filter[]): Promise<Blob> => {
-    try {
-      let url = `${urls.groupMasterViewPath}/export`;
-      let requestOptions: RequestInit = {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      };
-
-      // If filters exist, use POST method with filter data
-      if (filters && filters.length > 0) {
-        const payload: any = {};
-
-        filters.forEach((filter) => {
-          switch (filter.field) {
-            case "groupType":
-              payload.groupTypes = filter.value;
-              break;
-            case "status":
-              payload.statuses = filter.value;
-              break;
-            case "stateName":
-              payload.stateNames = filter.value;
-              break;
-            case "cityName":
-              payload.cityNames = filter.value;
-              break;
-            case "groupName":
-              payload.groupNames = filter.value;
-              break;
-            case "groupId":
-              payload.groupIds = filter.value;
-              break;
-            case "contactNo":
-              payload.contactNos = filter.value;
-              break;
-            case "remark":
-              payload.remarks = filter.value;
-              break;
-            default:
-              payload[`${filter.field}s`] = filter.value;
-          }
-        });
-
-        requestOptions = {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        };
-
-        url = `${urls.groupMasterViewPath}/export-filtered`;
-      }
-
-      const response = await fetch(url, requestOptions);
-
-      if (!response.ok) {
-        throw new Error("Export failed");
-      }
-
-      return await response.blob();
-    } catch (error: any) {
-      console.error("Error exporting groups master:", error.message);
-      throw new Error(error.message || "Failed to export groups master");
     }
   },
 

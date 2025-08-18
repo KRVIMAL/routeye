@@ -1,4 +1,4 @@
-// src/components/ui/Select.tsx - Custom Select Component
+// src/components/ui/Select.tsx - Custom Select Component with onBlur validation
 import React, { useState, useRef, useEffect } from "react";
 import { FiChevronDown, FiX, FiSearch, FiCheck } from "react-icons/fi";
 
@@ -7,6 +7,11 @@ export interface SelectOption {
   label: string;
   disabled?: boolean;
   required?: boolean;
+}
+
+interface ValidationRules {
+  required?: boolean;
+  custom?: (value: string | string[] | null) => string | null;
 }
 
 interface SelectProps {
@@ -30,6 +35,9 @@ interface SelectProps {
   onSearchChange?: (searchTerm: string) => void;
   required?: boolean;
   size?: any;
+  onBlur?: (e: React.FocusEvent) => void;
+  autoValidate?: boolean;
+  validation?: ValidationRules;
 }
 
 const Select: React.FC<SelectProps> = ({
@@ -52,14 +60,45 @@ const Select: React.FC<SelectProps> = ({
   loadingMessage = "Loading...",
   onSearchChange,
   required = false,
+  onBlur,
+  autoValidate = true,
+  validation,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [hasBeenBlurred, setHasBeenBlurred] = useState(false);
+  const [internalError, setInternalError] = useState("");
 
   const selectRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
+
+  // Validation function
+  const validateValue = (val: string | string[] | null): string => {
+    if (!validation && !required) return '';
+
+    // Required validation
+    if (required) {
+      if (multiple) {
+        if (!Array.isArray(val) || val.length === 0) {
+          return `${label || 'This field'} is required`;
+        }
+      } else {
+        if (!val) {
+          return `${label || 'This field'} is required`;
+        }
+      }
+    }
+
+    // Custom validation
+    if (validation?.custom) {
+      const customError = validation.custom(val);
+      if (customError) return customError;
+    }
+
+    return '';
+  };
 
   // Handle search term changes
   const handleSearchChange = (newSearchTerm: string) => {
@@ -76,7 +115,6 @@ const Select: React.FC<SelectProps> = ({
         option.label.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-  // Get selected options
   // Get selected options - add null check
   const selectedOptions: any = multiple
     ? options.filter(
@@ -86,31 +124,51 @@ const Select: React.FC<SelectProps> = ({
     ? options.find((option) => option.value === value)
     : null; // Add null fallback
 
+  // Use internal error if no external error provided
+  const displayError = error || internalError;
+
   // Handle option selection
   const handleSelect = (selectedOption: SelectOption) => {
     if (selectedOption.disabled) return;
 
+    let newValue;
     if (multiple) {
       const currentValue = Array.isArray(value) ? value : [];
       const isSelected = currentValue.includes(selectedOption.value);
 
       if (isSelected) {
-        const newValue = currentValue.filter((v) => v !== selectedOption.value);
-        onChange(newValue.length > 0 ? newValue : null);
+        newValue = currentValue.filter((v) => v !== selectedOption.value);
+        newValue = newValue.length > 0 ? newValue : null;
       } else {
-        onChange([...currentValue, selectedOption.value]);
+        newValue = [...currentValue, selectedOption.value];
       }
     } else {
-      onChange(selectedOption.value);
+      newValue = selectedOption.value;
       setIsOpen(false);
       handleSearchChange("");
     }
+
+    // Validate if auto-validate is enabled and field has been blurred
+    if (autoValidate && hasBeenBlurred) {
+      const validationError = validateValue(newValue);
+      setInternalError(validationError);
+    }
+
+    onChange(newValue);
   };
 
   // Handle clear
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(null);
+    const newValue = null;
+    
+    // Validate if auto-validate is enabled and field has been blurred
+    if (autoValidate && hasBeenBlurred) {
+      const validationError = validateValue(newValue);
+      setInternalError(validationError);
+    }
+    
+    onChange(newValue);
     handleSearchChange("");
   };
 
@@ -119,7 +177,15 @@ const Select: React.FC<SelectProps> = ({
     e.stopPropagation();
     if (multiple && Array.isArray(value)) {
       const newValue = value.filter((v) => v !== optionValue);
-      onChange(newValue.length > 0 ? newValue : null);
+      const finalValue = newValue.length > 0 ? newValue : null;
+      
+      // Validate if auto-validate is enabled and field has been blurred
+      if (autoValidate && hasBeenBlurred) {
+        const validationError = validateValue(finalValue);
+        setInternalError(validationError);
+      }
+      
+      onChange(finalValue);
     }
   };
 
@@ -167,7 +233,15 @@ const Select: React.FC<SelectProps> = ({
           searchTerm === ""
         ) {
           const newValue = value.slice(0, -1);
-          onChange(newValue.length > 0 ? newValue : null);
+          const finalValue = newValue.length > 0 ? newValue : null;
+          
+          // Validate if auto-validate is enabled and field has been blurred
+          if (autoValidate && hasBeenBlurred) {
+            const validationError = validateValue(finalValue);
+            setInternalError(validationError);
+          }
+          
+          onChange(finalValue);
         }
         break;
     }
@@ -219,8 +293,7 @@ const Select: React.FC<SelectProps> = ({
           className="block text-body-small font-medium text-text-primary mb-1"
         >
           {label}
-          {required && <span className="text-error-500 ml-1">*</span>}{" "}
-          {/* Add this line */}
+          {required && <span className="text-error-500 ml-1">*</span>}
         </label>
       )}
 
@@ -235,10 +308,25 @@ const Select: React.FC<SelectProps> = ({
           id={selectId}
           onClick={() => !disabled && setIsOpen(!isOpen)}
           onKeyDown={handleKeyDown}
+          onBlur={(e) => {
+            // Only trigger blur if focus is leaving the entire select component
+            if (!selectRef.current?.contains(e.relatedTarget as Node)) {
+              setHasBeenBlurred(true);
+              
+              if (autoValidate) {
+                const validationError = validateValue(value);
+                setInternalError(validationError);
+              }
+              
+              if (onBlur) {
+                onBlur(e);
+              }
+            }
+          }}
           tabIndex={disabled ? -1 : 0}
           className={`
             input min-h-[42px] flex items-center justify-between
-            ${error ? "border-error-500 focus:border-error-500" : ""}
+            ${displayError ? "border-error-500 focus:border-error-500" : ""}
             ${isOpen ? "border-primary-500 ring-2 ring-primary-100" : ""}
             ${disabled ? "cursor-not-allowed" : "cursor-pointer"}
           `}
@@ -309,7 +397,6 @@ const Select: React.FC<SelectProps> = ({
                 <div className="relative">
                   <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
                   <input
-                    required
                     ref={searchInputRef}
                     type="text"
                     value={searchTerm}
@@ -383,10 +470,10 @@ const Select: React.FC<SelectProps> = ({
       </div>
 
       {/* Error message */}
-      {error && <p className="mt-1 text-caption text-error-600">{error}</p>}
+      {displayError && <p className="mt-1 text-caption text-error-600">{displayError}</p>}
 
       {/* Helper text */}
-      {helper && !error && (
+      {helper && !displayError && (
         <p className="mt-1 text-caption text-text-muted">{helper}</p>
       )}
     </div>

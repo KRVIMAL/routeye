@@ -1,5 +1,5 @@
 // components/CustomSummary/CustomSummary.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   LuChevronDown,
   LuChevronUp,
@@ -8,6 +8,12 @@ import {
 } from "react-icons/lu";
 import DoughnutChart from "./DoughnutChart";
 import SummaryLoadingSkeleton from "./SummaryLoadingSkeleton";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+} from "lucide-react";
 
 // Types
 export interface ChartData {
@@ -250,36 +256,82 @@ const CustomSummary: React.FC<CustomSummaryProps> = ({
     config.defaultCollapsed || false
   );
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const [cardsPerView, setCardsPerView] = useState(() => {
     if (typeof window === "undefined") return config.cardsPerView?.desktop || 5;
-    const width = window.innerWidth;
-    if (width < 640) return config.cardsPerView?.mobile || 1;
-    if (width < 1024) return config.cardsPerView?.tablet || 3;
     return config.cardsPerView?.desktop || 5;
   });
 
-  // Handle responsive behavior
+  // Add this new function to calculate optimal cards per view
+  const calculateCardsPerView = useCallback(() => {
+    if (!containerRef.current) return;
+
+    const containerWidth = containerRef.current.offsetWidth;
+    const cardWidth = config.cardWidth || 192;
+    const cardSpacing = config.cardSpacing || 16;
+    const navigationSpace = 96; // Space for navigation arrows (48px each side)
+
+    // Calculate available width for cards
+    const availableWidth = containerWidth - navigationSpace;
+    const maxCardsFromWidth = Math.floor(
+      availableWidth / (cardWidth + cardSpacing)
+    );
+
+    // Show all cards if they fit, otherwise use responsive defaults
+    const maxPossibleCards = Math.min(cards.length, maxCardsFromWidth);
+
+    let defaultCardsPerView;
+    const width = window.innerWidth;
+    if (width < 640) {
+      defaultCardsPerView = config.cardsPerView?.mobile || 1;
+    } else if (width < 1024) {
+      defaultCardsPerView = config.cardsPerView?.tablet || 3;
+    } else {
+      defaultCardsPerView = config.cardsPerView?.desktop || 5;
+    }
+
+    // If all cards fit, show all; otherwise use default responsive behavior
+    const finalCardsPerView =
+      maxPossibleCards >= cards.length
+        ? cards.length
+        : Math.min(defaultCardsPerView, maxPossibleCards);
+
+    setCardsPerView(finalCardsPerView);
+    setContainerWidth(containerWidth);
+  }, [cards.length, config.cardWidth, config.cardSpacing, config.cardsPerView]);
+
+  // Replace the existing resize useEffect
   useEffect(() => {
+    calculateCardsPerView();
+
     const handleResize = () => {
-      const width = window.innerWidth;
-      let newCardsPerView;
-      if (width < 640) {
-        newCardsPerView = config.cardsPerView?.mobile || 1;
-      } else if (width < 1024) {
-        newCardsPerView = config.cardsPerView?.tablet || 3;
-      } else {
-        newCardsPerView = config.cardsPerView?.desktop || 5;
-      }
-      setCardsPerView(newCardsPerView);
+      calculateCardsPerView();
     };
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [config.cardsPerView]);
+  }, [calculateCardsPerView]);
 
-  // Navigation logic
+  // Add this useEffect to recalculate when cards change
+  useEffect(() => {
+    calculateCardsPerView();
+  }, [cards.length, calculateCardsPerView]);
+
+  // Replace the existing navigation logic
+  const shouldShowNavigation =
+    cards.length > cardsPerView && config.showNavigation !== false;
   const canNavigateLeft = currentCardIndex > 0;
   const canNavigateRight = currentCardIndex + cardsPerView < cards.length;
+
+  // Reset currentCardIndex if it's out of bounds
+  useEffect(() => {
+    const maxIndex = Math.max(0, cards.length - cardsPerView);
+    if (currentCardIndex > maxIndex) {
+      setCurrentCardIndex(maxIndex);
+    }
+  }, [cardsPerView, cards.length, currentCardIndex]);
 
   const handlePrevious = () => {
     if (canNavigateLeft) {
@@ -315,7 +367,7 @@ const CustomSummary: React.FC<CustomSummaryProps> = ({
       {/* Header */}
       <div
         className="flex items-center justify-between mb-4"
-        style={config.headerStyle}
+        style={{ ...config.headerStyle }}
       >
         <div className="flex items-center space-x-2">
           {config.collapsible !== false ? (
@@ -323,26 +375,20 @@ const CustomSummary: React.FC<CustomSummaryProps> = ({
               onClick={() => setIsCollapsed(!isCollapsed)}
               className="flex items-center space-x-2 focus:outline-none"
             >
-              <h2 style={titleStyle}>{config.title}</h2>
+              <h2 className="summary-title">{config.title}</h2>
               {isCollapsed ? (
-                <LuChevronDown
-                  size={16}
-                  style={{ color: config.titleColor || "#1F3A8A" }}
-                />
+                <ChevronDown height={18} width={18}  style={{ color: "#1F3A8A" }} />
               ) : (
-                <LuChevronUp
-                  size={16}
-                  style={{ color: config.titleColor || "#1F3A8A" }}
-                />
+                <ChevronUp  height={18} width={18}  style={{ color: "#1F3A8A" }} />
               )}
             </button>
           ) : (
-            <h2 style={titleStyle}>{config.title}</h2>
+            <h2 className="summary-title">{config.title}</h2>
           )}
         </div>
 
         {/* Optional Refresh Button */}
-        {onRefresh && (
+        {!onRefresh && (
           <button
             onClick={onRefresh}
             className="text-sm text-gray-600 hover:text-gray-800 underline"
@@ -384,32 +430,32 @@ const CustomSummary: React.FC<CustomSummaryProps> = ({
 
           {/* Cards Display */}
           {!loading && !error && cards.length > 0 && (
-            <>
-              {/* Navigation Arrows */}
-              {config.showNavigation !== false && canNavigateLeft && (
+            <div ref={containerRef} className="relative">
+              {/* Navigation Arrows - only show when needed and position them properly */}
+              {shouldShowNavigation && canNavigateLeft && (
                 <button
                   onClick={handlePrevious}
-                  className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-12 z-10 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200"
-                  style={{ color: config.titleColor || "#1F3A8A" }}
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200"
+                  style={{ color: "#1F3A8A" }}
                 >
-                  <LuChevronLeft size={20} />
+                  <ChevronLeft size={20} />
                 </button>
               )}
 
-              {config.showNavigation !== false && canNavigateRight && (
+              {shouldShowNavigation && canNavigateRight && (
                 <button
                   onClick={handleNext}
-                  className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-12 z-10 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200"
-                  style={{ color: config.titleColor || "#1F3A8A" }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200"
+                  style={{ color: "#1F3A8A" }}
                 >
-                  <LuChevronRight size={20} />
+                  <ChevronRight size={20} />
                 </button>
               )}
 
               {/* Cards Container */}
               <div
-                className="overflow-hidden"
-                style={{ padding: "8px 8px 8px 12px" }}
+                className="overflow-hidden px-[2px] py-6"
+                // style={{ padding: "8px 8px 8px 12px" }}
               >
                 <div
                   className="flex transition-transform duration-300 ease-in-out"
@@ -432,27 +478,26 @@ const CustomSummary: React.FC<CustomSummaryProps> = ({
                 </div>
               </div>
 
-              {/* Mobile Indicators */}
-              {config.showIndicators !== false &&
-                cards.length > cardsPerView && (
-                  <div className="flex justify-center mt-4 space-x-2 md:hidden">
-                    {Array.from(
-                      { length: Math.ceil(cards.length / cardsPerView) },
-                      (_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setCurrentCardIndex(i * cardsPerView)}
-                          className={`w-2 h-2 rounded-full transition-colors duration-200 ${
-                            Math.floor(currentCardIndex / cardsPerView) === i
-                              ? "bg-blue-600"
-                              : "bg-gray-300"
-                          }`}
-                        />
-                      )
-                    )}
-                  </div>
-                )}
-            </>
+              {/* Mobile Indicators - only show when navigation is needed */}
+              {shouldShowNavigation && config.showIndicators !== false && (
+                <div className="flex justify-center mt-4 space-x-2 md:hidden">
+                  {Array.from(
+                    { length: Math.ceil(cards.length / cardsPerView) },
+                    (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentCardIndex(i * cardsPerView)}
+                        className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                          Math.floor(currentCardIndex / cardsPerView) === i
+                            ? "bg-blue-600"
+                            : "bg-gray-300"
+                        }`}
+                      />
+                    )
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

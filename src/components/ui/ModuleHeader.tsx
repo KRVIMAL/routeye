@@ -58,6 +58,7 @@ interface ModuleHeaderProps {
   onHeaderTabChange?: (tabId: string) => void;
   titleClassName?: string;
   titleStyle?: React.CSSProperties;
+  style?: any;
 }
 
 const ModuleHeader: React.FC<ModuleHeaderProps> = ({
@@ -87,6 +88,7 @@ const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   onHeaderTabChange,
   titleClassName,
   titleStyle,
+  style = "px-6",
 }) => {
   const navigate = useNavigate();
 
@@ -104,7 +106,7 @@ const ModuleHeader: React.FC<ModuleHeaderProps> = ({
     >
       {/* Breadcrumbs */}
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <div className="px-6 pt-4">
+        <div className={`pt-4 ${style}`}>
           <Breadcrumb items={breadcrumbs} />
         </div>
       )}
@@ -129,7 +131,7 @@ const ModuleHeader: React.FC<ModuleHeaderProps> = ({
               className={`text-heading-1 text-text-primary ${
                 titleClassName || ""
               }`}
-              style={titleStyle}
+              style={style ? { ...titleStyle, margin: "-4px" } : titleStyle}
             >
               {title}
             </h1>{" "}

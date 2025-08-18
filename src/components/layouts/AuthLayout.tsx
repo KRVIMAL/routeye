@@ -34,7 +34,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         {/* Left Side - Download App Section */}
         {showDownloadSection && (
           <div className="hidden lg:flex lg:w-1/2 items-end p-8">
-            <AppDownloadSection />
+            {/* <AppDownloadSection /> */}
           </div>
         )}
 

@@ -874,6 +874,17 @@ textarea:focus-visible {
   vertical-align: middle;
   color: #1F3A8A;
 }
+.summary-title {
+  font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0.03em; /* 3% */
+  text-align: center;
+  text-transform: capitalize;
+  vertical-align: middle;
+  color: #1F3A8A;
+}
 /* Add this class to your CSS */
 .table-work-sans,
 .table-work-sans * {

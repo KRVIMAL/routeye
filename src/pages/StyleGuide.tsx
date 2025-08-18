@@ -1,9 +1,10 @@
 import React from 'react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import Input from '../components/ui/Input';
+// import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import { FiSave, FiDownload } from 'react-icons/fi';
+import { Input } from '../components/ui/Input';
 
 const StyleGuide: React.FC = () => {
   return (
@@ -48,7 +49,7 @@ const StyleGuide: React.FC = () => {
               <Button variant="secondary" icon={FiDownload}>Secondary</Button>
               <Button variant="success">Success</Button>
               <Button variant="warning">Warning</Button>
-              <Button variant="error">Error</Button>
+              {/* <Button variant="error">Error</Button> */}
             </div>
             <div className="flex flex-wrap gap-md">
               <Button size="sm">Small</Button>
@@ -56,7 +57,7 @@ const StyleGuide: React.FC = () => {
               <Button size="lg">Large</Button>
             </div>
             <div className="flex flex-wrap gap-md">
-              <Button isLoading>Loading</Button>
+              {/* <Button isLoading>Loading</Button> */}
               <Button disabled>Disabled</Button>
             </div>
           </div>
@@ -73,7 +74,7 @@ const StyleGuide: React.FC = () => {
             <Input label="Username" placeholder="Enter username" />
             <Input label="Email" type="email" placeholder="Enter email" />
             <Input label="Password" type="password" error="Password is required" />
-            <Input label="Search" placeholder="Search..." helper="Type to search" />
+            {/* <Input label="Search" placeholder="Search..." helper="Type to search" /> */}
           </div>
         </Card.Body>
       </Card>

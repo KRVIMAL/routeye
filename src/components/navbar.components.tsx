@@ -13,6 +13,24 @@ import {
   FiChevronLeft,
   FiChevronRight,
 } from "react-icons/fi";
+import {
+  BatteryPlus,
+  BookUser,
+  CardSim,
+  CircleUser,
+  Contact,
+  Group,
+  KeySquare,
+  RadioReceiver,
+  ShieldHalf,
+  Signal,
+  SquareUserRound,
+  SunMoon,
+  Truck,
+  User,
+  UserRoundPen,
+  Users,
+} from "lucide-react";
 
 interface NavbarProps {
   className?: string;
@@ -49,33 +67,36 @@ const NavbarContent: React.FC<NavbarProps> = ({ className = "" }) => {
 
   // Super Admin tab configuration
   const superAdminTabConfig: TabConfig[] = [
-    { label: "Devices" },
-    { label: "Vehicles" },
-    { label: "Clients" },
-    { label: "Groups" },
-    { label: "Telecom" },
+    { label: "Devices", icon: <RadioReceiver size={16} /> },
+    { label: "Vehicles", icon: <Truck size={16} /> },
+    { label: "Clients", icon: <BookUser size={16} /> },
+    { label: "Groups", icon: <Users size={16} /> },
+    { label: "Telecom", icon: <Signal size={16} /> },
   ];
 
   // Admin tab configuration
   const adminTabConfig: TabConfig[] = [
-    { label: "Drivers" },
-    { label: "Vehicle Master" },
-    { label: "Group Master" },
-    { label: "Users" },
-    { label: "Device onboarding" },
-    { label: "Telecom Master" },
+    { label: "Drivers", icon: <Contact size={16} /> },
+    { label: "Vehicle Master", icon: <Truck size={16} /> },
+    { label: "Group Master", icon: <Group size={16} /> },
+    { label: "Users", icon: <CircleUser size={16} /> },
+    { label: "Device onboarding", icon: <BatteryPlus size={16} /> },
+    { label: "Telecom Master", icon: <CardSim size={16} /> },
   ];
 
   // Account Management tab configuration
   const accountManagementTabConfig: TabConfig[] = [
-    { label: "Roles & Rights" },
-    { label: "Change Password" },
-    { label: "Appearance Setting" },
+    { label: "Accounts", icon: <UserRoundPen size={16} /> }, //star-user
+    { label: "Roles & Rights", icon: <ShieldHalf size={16} /> },
+    { label: "Change Password", icon: <KeySquare size={16} /> },
+    { label: "Appearance Setting", icon: <SunMoon size={16} /> },
   ];
 
   // Route detection logic - use generic routes with role-based content
   const isManagementRoute = location.pathname.includes("/management");
-  const isAccountManagementRoute = location.pathname.includes("/account-management");
+  const isAccountManagementRoute = location.pathname.includes(
+    "/account-management"
+  );
 
   // Determine current context based on role and route
   const isSuperAdminContext = isManagementRoute && isSuperAdmin();
@@ -143,6 +164,9 @@ const NavbarContent: React.FC<NavbarProps> = ({ className = "" }) => {
     } else if (isAccountContext) {
       const pathSegment = location.pathname.split("/").pop();
       switch (pathSegment) {
+        case "accounts":
+          setActiveTab("Accounts");
+          break;
         case "roles":
           setActiveTab("Roles & Rights");
           break;
@@ -158,7 +182,12 @@ const NavbarContent: React.FC<NavbarProps> = ({ className = "" }) => {
     } else {
       setActiveTab("All Device");
     }
-  }, [location.pathname, isSuperAdminContext, isAdminContext, isAccountContext]);
+  }, [
+    location.pathname,
+    isSuperAdminContext,
+    isAdminContext,
+    isAccountContext,
+  ]);
 
   // Check if scrolling is needed and update scroll button states
   const checkScrollState = () => {
@@ -324,6 +353,9 @@ const NavbarContent: React.FC<NavbarProps> = ({ className = "" }) => {
     } else if (isAccountContext) {
       // Account Management routes
       switch (tabLabel) {
+        case "Accounts":
+          navigate("/account-management/accounts");
+          break;
         case "Roles & Rights":
           navigate("/account-management/roles");
           break;
@@ -449,7 +481,7 @@ const NavbarContent: React.FC<NavbarProps> = ({ className = "" }) => {
                 selected={activeTab}
                 onChange={handleTabChange}
                 orientation="horizontal"
-                size={needsScroll ? "sm" : "md"}
+                size={needsScroll ? "sm" : "sm"}
                 scrollable={false}
                 className="flex-nowrap"
               />
@@ -516,7 +548,9 @@ const NavbarContent: React.FC<NavbarProps> = ({ className = "" }) => {
 export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
   // Fallback navbar when Router context is not available
   const FallbackNavbar = () => (
-    <nav className={`bg-white border-b border-gray-200 h-[53.93px] flex items-center ${className}`}>
+    <nav
+      className={`bg-white border-b border-gray-200 h-[53.93px] flex items-center ${className}`}
+    >
       <div className="flex items-center justify-between w-full px-4">
         <div className="flex items-center flex-shrink-0">
           <div className="mr-6 hidden sm:block">

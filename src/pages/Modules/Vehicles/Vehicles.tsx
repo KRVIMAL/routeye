@@ -213,27 +213,39 @@ const Vehicles: React.FC = () => {
         ),
       },
       {
-        field: "createdTime",
-        headerName: "Created",
+        field: "createdAt",
+        headerName: "Created At",
         width: 120,
         type: "date",
         sortable: true,
-        filterable: false,
+        filterable: true,
         resizable: true,
         renderCell: (params) => (
-          <span>{new Date(params.value).toLocaleDateString()}</span>
+          <span>{new Date(params.value).toLocaleString()}</span>
         ),
       },
       {
+        field: "updatedAt",
+        headerName: "Updated At",
+        width: 120,
+        type: "date",
+        sortable: true,
+        filterable: true,
+        resizable: true,
+        renderCell: (params) => (
+          <span>{new Date(params.value).toLocaleString()}</span>
+        ),
+      },
+            {
         field: "updatedTime",
         headerName: "Updated",
         width: 120,
         type: "date",
         sortable: true,
-        filterable: false,
+        filterable: true,
         resizable: true,
         renderCell: (params) => (
-          <span>{new Date(params.value).toLocaleDateString()}</span>
+          <span>{new Date(params.value).toLocaleString()}</span>
         ),
       },
     ],
@@ -550,21 +562,25 @@ const Vehicles: React.FC = () => {
   );
 
   return (
-    <div
+   <div
       style={{
         background: "#FFFFFF",
         borderTopLeftRadius: "24px",
         borderTopRightRadius: "24px",
+        // position:"fixed",
+        height: "100%",
       }}
     >
       <ModuleHeader
         title={strings.VEHICLES}
         breadcrumbs={breadcrumbs}
         className="rounded-t-[24px]"
+        style="px-4"
+        titleClassName="module-title-custom"
       />
       {/* Pure CustomSummary Component */}
       <div
-        className="mt-2 w-full mx-auto"
+        className="mt-2 w-full px-4"
         style={{
           maxWidth: "calc(100vw - 6.8rem)", // Match the table container width
         }}
@@ -583,7 +599,7 @@ const Vehicles: React.FC = () => {
           columns={columns}
           rows={vehicles}
           loading={loading}
-          height={650}
+          height={600}
           pagination={{
             page: currentPage,
             pageSize: pageSize,

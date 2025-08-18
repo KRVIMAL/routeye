@@ -4,7 +4,7 @@ export class UrlConstants {
 
   // Device URLs
   devicesViewPath = "/devices";
-  devicesFilterPath= "/devices/filter";
+  devicesFilterPath = "/devices/filter";
   addDeviceViewPath = `${this.devicesViewPath}/add`;
   editDeviceViewPath = `${this.devicesViewPath}/edit`;
   // Client URLs
@@ -83,20 +83,24 @@ export class UrlConstants {
   addTelecomMasterViewPath = `${this.telecomMasterViewPath}/add`;
   editTelecomMasterViewPath = `${this.telecomMasterViewPath}/edit`;
 
+  // Telecom URLs
+  telecomViewPath = "/telecom";
+  addTelecomViewPath = "/telecom/add";
+  editTelecomViewPath = "/telecom/edit";
+
   //Geofences URLs
   geofencesViewPath = "/geofences";
 
   //Routes URLs
   routesViewPath = "/routes";
 
-
-  // Monitoring URLs 
+  // Monitoring URLs
   monitoringDevicesPath = "/monitoring/devices";
 
-   // Settings Routes
+  // Settings Routes
   settingsViewPath = "/settings";
   profileViewPath = "/profile";
-  
+
   // API Routes
   deviceApiPath = "/api/v1/devices";
   vehicleApiPath = "/api/v1/vehicles";

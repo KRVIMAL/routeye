@@ -134,9 +134,9 @@ export const ParticlesBackground: React.FC<ParticlesBackgroundProps> = ({
     <Particles
       id={id}
       className={`absolute inset-0 ${className}`}
-      particlesInit={particlesInit}
+      // particlesInit={particlesInit}
       particlesLoaded={particlesLoaded}
-      options={particlesConfig}
+      // options={particlesConfig}
     />
   );
 };

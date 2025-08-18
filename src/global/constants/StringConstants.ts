@@ -8,6 +8,7 @@ export class StringConstants {
   TRANSPORTER = "TRANSPORTER";
   CONTRACTOR = "CONTRACTOR";
   VEHICLE_MASTER = "VEHICLE_MASTER";
+  TELECOM = "TELECOM";
   DEVICE_ONBOARDING_MODULE = "DEVICE_ONBOARDING";
   GROUPS_MODULE = "GROUPS"; // Simple groups (Group Modules)
   GROUPS_MASTER_MODULE = "GROUPS_MASTER"; // Complex groups with IMEI (Group Masters)
@@ -18,8 +19,7 @@ export class StringConstants {
   DEVICE_DATA_MODULE = "DEVICE_DATA";
   ALERTS_MODULE = "ALERTS";
   GEOZONES = "Geozones";
-  ROUTES = "Routes"
-
+  ROUTES = "Routes";
 
   // Navigation
   HOME = "Home";
@@ -39,8 +39,7 @@ export class StringConstants {
   ROAD_MASTER = "Road Master";
   DEVICE_DATA = "Device Data";
   ALERTS = "Alerts";
-  TELECOM_MASTER = "Telecom Master"
-
+  TELECOM_MASTER = "Telecom Master";
 
   // Status
   ACTIVE = "Active";
@@ -78,11 +77,14 @@ export class StringConstants {
   UPDATE_DEVICE_ONBOARDING = "Update Device On-boarding";
   EDIT_DEVICE_ONBOARDING = "Edit Device On-boarding";
 
-
   // Telecome Master specific
   ADD_TELECOM_MASTER = "Add Telecom Master";
   UPDATE_TELECOM_MASTER = "Update Telecom Master";
   EDIT_TELECOM_MASTER = "Edit Telecom Master";
+
+  UPDATE_TELECOM = "Update Telecom";
+  ADD_TELECOM = "Add Telecom";
+  EDIT_TELECOM = "Edit Telecom";
 
   // Groups specific (Simple groups - Group Modules)
   ADD_GROUP = "Add Group";
@@ -94,7 +96,6 @@ export class StringConstants {
   UPDATE_GROUPS_MASTER = "Update Groups Master";
   EDIT_GROUPS_MASTER = "Edit Groups Master";
 
-
   // Alerts specific - ADD THESE
   ADD_ALERT = "Add Alert";
   UPDATE_ALERT = "Update Alert";
@@ -104,7 +105,6 @@ export class StringConstants {
   ADD_USER = "Add User";
   UPDATE_USER = "Update User";
   EDIT_USER = "Edit User";
-
 
   // Device Data specific - ADD THESE
   HEX_DATA = "Hex Data";
@@ -219,7 +219,6 @@ export class StringConstants {
   VEHICLE_TYPE = "Vehicle Type";
   ICON = "Icon";
 
-
   // Alerts form labels - ADD THESE
   CATEGORY = "Category";
   ALERT_NAME = "Alert Name";
@@ -229,7 +228,7 @@ export class StringConstants {
   NOTIFICATION_TYPES = "Notification Types";
   CONTACT_DETAILS = "Contact Details";
 
-  // Telecom master form labels 
+  // Telecom master form labels
   CCID_NUMBER = "CCID Number";
   IMSI_NUMBER = "IMSI Number";
   TELECOM_OPERATOR = "Telecom Operator";
@@ -237,10 +236,9 @@ export class StringConstants {
   NO_OF_NETWORK = "No. Of Network";
   MOBILE_NO_1 = "Mobile Number 1";
   MOBILE_NO_2 = "Mobile Number 2";
-  NETWORK_SUPPORT = "Network Support"
-  APN_1 = "Apn 1"
-  APN_2 = "Apn 2"
-
+  NETWORK_SUPPORT = "Network Support";
+  APN_1 = "Apn 1";
+  APN_2 = "Apn 2";
 
   // Road Master labels
   DISTRICT_NAME = "District Name";
@@ -281,7 +279,6 @@ export class StringConstants {
   INVALID_IMEI_FORMAT = "IMEI should be 15-17 characters";
   INVALID_PASSWORD_LENGTH = "Password must be at least 6 characters";
 
-
   // Authentication
   SIGN_IN = "Sign in";
   WELCOME_TO = "Welcome to";
@@ -307,7 +304,8 @@ export class StringConstants {
   // Forgot Password
   FORGOT_PASSWORD_TITLE = "Forgot Password";
   ENTER_USERNAME = "username or email";
-  FORGOT_PASSWORD_MESSAGE = "We have sent an One time password to reset password to your number";
+  FORGOT_PASSWORD_MESSAGE =
+    "We have sent an One time password to reset password to your number";
 
   // Reset Password
   REGISTER_NEW_PASSWORD = "Register new password";
@@ -323,7 +321,8 @@ export class StringConstants {
   CONTACT_IMZ_SUPPORT = "Contact IMZ Support";
   SUPPORT_EMAIL = "support@imzcorporate.com";
   SUPPORT_PHONE = "+91 95396-95396";
-  SUPPORT_MESSAGE = "If you're having trouble accessing your account, don't worry — we're here to help. Make sure you're entering the correct email and password. If you've forgotten your password, use the \"Forgot Password?\" link to reset it securely. Still need help? Reach out to IMZ support team anytime for quick assistance.";
+  SUPPORT_MESSAGE =
+    "If you're having trouble accessing your account, don't worry — we're here to help. Make sure you're entering the correct email and password. If you've forgotten your password, use the \"Forgot Password?\" link to reset it securely. Still need help? Reach out to IMZ support team anytime for quick assistance.";
 
   // Language
   SELECT_LANGUAGE = "Select Language";
@@ -362,8 +361,6 @@ export class StringConstants {
   TERMS_MESSAGE = "By pressing continue you agree to our terms and conditions.";
   RETURN_TO_LOGIN_LINK = "Return to login";
 
-
-  
   // Modules
   MONITORING = "MONITORING";
   DASHBOARD = "DASHBOARD";
@@ -375,18 +372,18 @@ export class StringConstants {
   // DEVICE_ONBOARDING = "DEVICE ONBOARDING";
   // ALERTS = "ALERTS";
   REPORT = "REPORT";
-  
+
   // Navigation
   // HOME = "Home";
   SETTINGS = "Settings";
   PROFILE = "Profile";
   LOGOUT = "Logout";
-  
+
   // Theme
   DARK_MODE = "DARK MODE";
   DAY_MODE = "DAY MODE";
   LIGHT_MODE = "LIGHT MODE";
-  
+
   // Status
   ONLINE = "Online";
   OFFLINE = "Offline";
@@ -394,11 +391,11 @@ export class StringConstants {
   HALT = "Halt";
   IDLE = "Idle";
   ALL_DEVICE = "All Device";
-  
+
   // Time
   MINUTES = "minutes";
   SECONDS = "seconds";
-  
+
   // Common
   LOADING = "Loading...";
   // ERROR = "Error";
@@ -416,16 +413,16 @@ export class StringConstants {
   // SEARCH = "Search";
   FILTER = "Filter";
   REFRESH = "Refresh";
-  
+
   // Language
   // ENGLISH = "English";
   // SELECT_LANGUAGE = "Select Language";
-  
+
   // Download App
   // DOWNLOAD_APP = "Download app";
   GET_IT_ON_GOOGLE_PLAY = "Get it on Google Play";
   DOWNLOAD_ON_APP_STORE = "Download on the App Store";
-  
+
   // Legal
   // TERMS_CONDITIONS = "Terms & Conditions";
   // PRIVACY_POLICY = "Privacy Policy";

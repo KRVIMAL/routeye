@@ -132,7 +132,7 @@ export const CustomTabs: React.FC<CustomTabsProps> = ({
         className={getContainerStyles()}
         style={{ fontFamily: "Work Sans, sans-serif" }}
       >
-        {tabConfig.map((tab: TabConfig, index: number) => {
+        {tabConfig?.map((tab: TabConfig, index: number) => {
           const isActive = activeTab === tab.label;
 
           return (

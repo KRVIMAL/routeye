@@ -158,7 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
       {/* Bottom Section: Theme Toggle and Profile */}
       <div className="border-t border-white/20 py-2 space-y-1 flex-shrink-0">
         {/* Theme Toggle */}
-        <button
+        {/* <button
           onClick={toggleTheme}
           className="w-full flex flex-col items-center justify-center h-[42.5px] px-2 text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group"
           title={`Switch to ${mode === "light" ? "dark" : "light"} mode`}
@@ -171,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
           <span className="text-[8px] font-medium text-center leading-tight">
             {mode === "light" ? "DARK MODE" : "DAY MODE"}
           </span>
-        </button>
+        </button> */}
 
         {/* Profile */}
         <button

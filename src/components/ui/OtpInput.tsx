@@ -130,7 +130,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
             {otp.map((digit, index) => (
                 <input
                     key={index}
-                    ref={(ref) => (inputRefs.current[index] = ref)}
+                    ref={(ref:any) => (inputRefs.current[index] = ref)}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiHome, FiUsers, FiEye } from "react-icons/fi";
 import ModuleHeader from "../../../components/ui/ModuleHeader";
-import CustomTable from "../../../components/ui/CustomTable/CustomTable";
+import CustomTable, { ExportFormat } from "../../../components/ui/CustomTable/CustomTable";
 import strings from "../../../global/constants/StringConstants";
 import urls from "../../../global/constants/UrlConstants";
 import toast from "react-hot-toast";
@@ -17,6 +17,7 @@ import CustomSummary, {
 import { getConfigPreset } from "../../../components/CustomSummary/utils/summaryConfigPresets";
 import { store } from "../../../store";
 import AccountHierarchyModal from "../../../components/ui/Modal/AccountHierarchyModal";
+import { exportService } from "../../../core-services/rest-api/apiHelpers";
 
 // Types
 interface Column {
@@ -36,10 +37,23 @@ interface Row {
   [key: string]: any;
 }
 
+// Updated Filter interface to support date filters
+interface DateFilter {
+  dateField: string;
+  dateFilterType: string;
+  fromDate?: string;
+  toDate?: string;
+  customValue?: number;
+  selectedDates?: Date[];
+  isPickAnyDate?: boolean;
+}
+
 interface Filter {
   field: string;
   value: any[];
   label?: string;
+  type?: "regular" | "date";
+  dateFilter?: DateFilter;
 }
 
 interface FilterOption {
@@ -145,13 +159,13 @@ const Accounts: React.FC = () => {
             <div className="truncate flex-1 min-w-0" title={params.value}>
               {params.value}
             </div>
-            <button
+            {/* <button
               onClick={() => handleViewHierarchy(params.row)}
               className="p-1 text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded transition-colors flex-shrink-0"
               title="View Hierarchy"
             >
               <FiEye className="w-4 h-4" />
-            </button>
+            </button> */}
           </div>
         ),
       },
@@ -259,27 +273,39 @@ const Accounts: React.FC = () => {
         ),
       },
       {
-        field: "createdTime",
-        headerName: "Created",
+        field: "createdAt",
+        headerName: "Created At",
         width: 120,
         type: "date",
         sortable: true,
-        filterable: false,
+        filterable: true,
         resizable: true,
         renderCell: (params) => (
-          <span>{new Date(params.value).toLocaleDateString()}</span>
+          <span>{new Date(params.value).toLocaleString()}</span>
         ),
       },
       {
-        field: "updatedTime",
-        headerName: "Updated",
+        field: "updatedAt",
+        headerName: "Updated At",
         width: 120,
         type: "date",
         sortable: true,
-        filterable: false,
+        filterable: true,
         resizable: true,
         renderCell: (params) => (
-          <span>{new Date(params.value).toLocaleDateString()}</span>
+          <span>{new Date(params.value).toLocaleString()}</span>
+        ),
+      },
+      {
+        field: "updatedAt",
+        headerName: "Inactive",
+        width: 120,
+        type: "date",
+        sortable: true,
+        filterable: true,
+        resizable: true,
+        renderCell: (params) => (
+          <span>{new Date(params.value).toLocaleString()}</span>
         ),
       },
     ],
@@ -436,18 +462,27 @@ const Accounts: React.FC = () => {
     (field: string, direction: "asc" | "desc" | null) => {
       const newSortConfig = direction ? { field, direction } : null;
       setSortConfig(newSortConfig);
-      
+
       // Maintain current operation type (search vs filter vs default)
       if (searchValue && searchValue.trim()) {
         // Currently in search mode - sorting not supported for search API
-        toast.info("Sorting is not available during search. Please clear search to use sorting.");
+        toast(
+          "Sorting is not available during search. Please clear search to use sorting."
+        );
         return;
       } else if (activeFilters.length > 0) {
         // Currently in filter mode
-        loadAccounts("", currentPage, pageSize, field, direction || undefined, activeFilters);
+        loadAccounts(
+          "",
+          currentPage,
+          pageSize,
+          field,
+          direction || undefined,
+          activeFilters
+        );
       } else {
         // Default mode - hierarchy API doesn't support sorting
-        toast.info("Sorting is not available for the default view.");
+        toast("Sorting is not available for the default view.");
         return;
       }
     },
@@ -461,7 +496,14 @@ const Accounts: React.FC = () => {
       setCurrentPage(1);
       // Clear search when filtering since search and filter are separate operations
       setSearchValue("");
-      loadAccounts("", 1, pageSize, sortConfig?.field, sortConfig?.direction, filters);
+      loadAccounts(
+        "",
+        1,
+        pageSize,
+        sortConfig?.field,
+        sortConfig?.direction,
+        filters
+      );
     },
     [pageSize, sortConfig]
   );
@@ -474,7 +516,14 @@ const Accounts: React.FC = () => {
 
       setCurrentPage(page);
       // Maintain current operation type (search vs filter vs default)
-      loadAccounts(searchValue, page, pageSize, sortConfig?.field, sortConfig?.direction, activeFilters);
+      loadAccounts(
+        searchValue,
+        page,
+        pageSize,
+        sortConfig?.field,
+        sortConfig?.direction,
+        activeFilters
+      );
     },
     [searchValue, pageSize, sortConfig, activeFilters]
   );
@@ -487,9 +536,23 @@ const Accounts: React.FC = () => {
 
       if (size === 0) {
         // Handle "All" option - load all data
-        loadAccounts(searchValue, 1, 999999, sortConfig?.field, sortConfig?.direction, activeFilters);
+        loadAccounts(
+          searchValue,
+          1,
+          999999,
+          sortConfig?.field,
+          sortConfig?.direction,
+          activeFilters
+        );
       } else {
-        loadAccounts(searchValue, 1, size, sortConfig?.field, sortConfig?.direction, activeFilters);
+        loadAccounts(
+          searchValue,
+          1,
+          size,
+          sortConfig?.field,
+          sortConfig?.direction,
+          activeFilters
+        );
       }
     },
     [searchValue, sortConfig, activeFilters]
@@ -552,32 +615,27 @@ const Accounts: React.FC = () => {
     navigate(urls.addAccountViewPath);
   }, [navigate]);
 
+  // Handle add client
+  const handleAddClient = useCallback(() => {
+    navigate(urls.addClientViewPath);
+  }, [navigate]);
+
   // Handle export
-  const handleExport = useCallback(async () => {
+  const handleExport = async (format: ExportFormat) => {
     try {
-      setLoading(true);
-      const blob = await accountServices.export(activeFilters);
+      await exportService.exportData(
+        `${urls.accountsViewPath}/export`,
+        format,
+        "accounts"
+      );
 
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `accounts_export_${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success("Accounts exported successfully");
+      toast.success(`Accounts exported successfully as ${format.toUpperCase()}`);
     } catch (error: any) {
-      console.error("Error exporting accounts:", error);
-      toast.error(error.message || "Failed to export accounts");
-    } finally {
-      setLoading(false);
+      console.error("Export failed:", error.message);
+      toast.error("Export failed. Please try again.");
     }
-  }, [activeFilters]);
+  };
+
 
   // Handle import
   const handleImport = useCallback(
@@ -620,21 +678,25 @@ const Accounts: React.FC = () => {
   );
 
   return (
-    <div
+   <div
       style={{
         background: "#FFFFFF",
         borderTopLeftRadius: "24px",
         borderTopRightRadius: "24px",
+        // position:"fixed",
+        height: "100%",
       }}
     >
       <ModuleHeader
         title={strings.ACCOUNTS}
         breadcrumbs={breadcrumbs}
         className="rounded-t-[24px]"
+        style="px-4"
+        titleClassName="module-title-custom"
       />
       {/* Pure CustomSummary Component */}
       <div
-        className="mt-2 w-full mx-auto"
+        className="mt-2 w-full px-4"
         style={{
           maxWidth: "calc(100vw - 6.8rem)", // Match the table container width
         }}
@@ -653,7 +715,7 @@ const Accounts: React.FC = () => {
           columns={columns}
           rows={accounts}
           loading={loading}
-          height={650}
+          height={600}
           pagination={{
             page: currentPage,
             pageSize: pageSize,
@@ -674,7 +736,7 @@ const Accounts: React.FC = () => {
       </div>
 
       {/* Hierarchy Modal */}
-      {selectedAccountForHierarchy && (
+      {/* {selectedAccountForHierarchy && (
         <AccountHierarchyModal
           isOpen={isHierarchyModalOpen}
           onClose={() => {
@@ -683,7 +745,7 @@ const Accounts: React.FC = () => {
           }}
           hierarchyData={selectedAccountForHierarchy}
         />
-      )}
+      )} */}
     </div>
   );
 };

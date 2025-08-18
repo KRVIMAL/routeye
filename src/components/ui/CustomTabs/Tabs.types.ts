@@ -2,7 +2,7 @@ export interface TabConfig {
   label: string;
   count?: number | null;
   disabled?: boolean;
-  icon?: React.ReactNode;
+  icon?: React.ReactNode|any;
 }
 
 export interface CustomTabsProps {

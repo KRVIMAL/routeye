@@ -455,7 +455,7 @@ const DeviceData: React.FC = () => {
                     !dateRange.startDate ||
                     !dateRange.endDate
                   }
-                  isLoading={loading}
+                  // isLoading={loading}
                   className="w-full"
                 >
                   {loading ? "Loading..." : "Filter Data"}
